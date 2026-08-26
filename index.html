@@ -308,8 +308,20 @@ const CONFIG = {
 };
 // ===============================================================================
 
+// ---- global error catcher: if ANYTHING throws, show it on-screen instead of failing silently ----
+window.addEventListener('error', function(e){
+  let box = document.getElementById('jsErrorBox');
+  if (!box){
+    box = document.createElement('div');
+    box.id = 'jsErrorBox';
+    box.style.cssText = 'position:fixed; bottom:0; left:0; right:0; background:#b3261e; color:#fff; font-family:monospace; font-size:12px; padding:10px 14px; z-index:9999; white-space:pre-wrap;';
+    document.body.appendChild(box);
+  }
+  box.textContent = 'JS error: ' + e.message + ' (' + (e.filename || '').split('/').pop() + ':' + e.lineno + ')';
+});
+
 // ---- state (declared up top so a Supabase load failure never breaks the rest) ----
-let supabase = null;
+let db = null;
 let isConfigured = false;
 let currentVariant = 'new';
 let currentWhen = 'once';
@@ -332,13 +344,13 @@ try {
   isConfigured = CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.startsWith("YOUR_");
   if (isConfigured) {
     if (typeof window.supabase === 'undefined') throw new Error('Supabase library did not load');
-    supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    db = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
   } else {
     document.getElementById('devBanner').style.display = 'block';
   }
 } catch (err) {
   console.error('Supabase init failed:', err);
-  supabase = null;
+  db = null;
   isConfigured = false;
   const banner = document.getElementById('devBanner');
   banner.textContent = '⚠ Could not connect to the order database (offline, or the CDN script was blocked). Adding items and WhatsApp checkout still work — order history and saved records won\'t.';
@@ -481,7 +493,7 @@ async function checkout(){
         payment_status: 'claimed',
         total_amount: item.qty * PRICE
       }));
-      const { error } = await supabase.from('orders').insert(rows);
+      const { error } = await db.from('orders').insert(rows);
       if (error) throw error;
     } catch (err){
       console.error('Supabase insert failed:', err);
@@ -528,7 +540,7 @@ async function lookupOrders(){
   }
 
   resultEl.innerHTML = '<p style="font-size:13.5px; color:#8A97A0;">Looking up orders…</p>';
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('orders')
     .select('*')
     .eq('phone', phone)
