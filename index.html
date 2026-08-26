@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>20L — Water, delivered down the hall</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#142433;
+    --paper:#F5F2EA;
+    --bottle:#1C6E8C;
+    --bottle-deep:#0F4C61;
+    --cap:#F4B942;
+    --cap-deep:#D69A1F;
+    --mist:#E4EEF0;
+    --line:#D8D2C4;
+    --good:#3E8E5A;
+    --bad:#B4482F;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'Inter',sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{ font-family:'Space Grotesk',sans-serif; letter-spacing:-0.01em; margin:0; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  a{color:inherit;}
+  button{ font-family:inherit; cursor:pointer; }
+  :focus-visible{ outline:3px solid var(--bottle); outline-offset:2px; }
+
+  .wrap{ max-width:1040px; margin:0 auto; padding:0 24px; }
+
+  /* Header */
+  header{ position:sticky; top:0; z-index:50; background:rgba(245,242,234,.9); backdrop-filter:blur(6px); border-bottom:1px solid var(--line); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; max-width:1040px; margin:0 auto; }
+  .brand{ display:flex; align-items:baseline; gap:6px; font-size:22px; font-weight:700; }
+  .brand .dot{ color:var(--cap-deep); }
+  .navlinks{ display:flex; gap:22px; font-size:14px; font-weight:500; }
+  .navlinks a{ text-decoration:none; color:var(--ink); opacity:.75; }
+  .navlinks a:hover{ opacity:1; }
+
+  /* Hero */
+  .hero{ padding:72px 0 56px; border-bottom:1px solid var(--line); }
+  .route{ display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--bottle-deep); margin-bottom:22px; }
+  .route span.step{ padding:4px 10px; background:var(--mist); border-radius:999px; }
+  .route .arrow{ opacity:.5; }
+  .hero h1{ font-size:clamp(38px,6vw,64px); font-weight:700; line-height:1.02; max-width:12ch; }
+  .hero h1 em{ font-style:normal; color:var(--bottle); }
+  .hero p.sub{ margin-top:18px; font-size:18px; max-width:46ch; color:#3A4B58; }
+  .hero .cta-row{ margin-top:30px; display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .btn{ display:inline-flex; align-items:center; gap:8px; padding:14px 24px; border-radius:999px; border:none; font-weight:600; font-size:15px; transition:transform .15s ease, box-shadow .15s ease; }
+  .btn-primary{ background:var(--cap); color:var(--ink); box-shadow:0 2px 0 var(--cap-deep); }
+  .btn-primary:hover{ transform:translateY(-1px); }
+  .btn-primary:active{ transform:translateY(1px); box-shadow:0 1px 0 var(--cap-deep); }
+  .btn-ghost{ background:transparent; border:1.5px solid var(--ink); color:var(--ink); }
+  .price-tag{ font-family:'IBM Plex Mono',monospace; font-size:14px; color:#5A6672; }
+
+  /* How it works */
+  .how{ padding:56px 0; border-bottom:1px solid var(--line); }
+  .how h2{ font-size:26px; margin-bottom:28px; }
+  .steps{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  .step-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:20px; }
+  .step-num{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--cap-deep); font-weight:500; }
+  .step-card h3{ font-size:16px; margin:10px 0 6px; }
+  .step-card p{ font-size:13.5px; color:#5A6672; margin:0; }
+
+  /* Order section */
+  .order{ padding:56px 0; border-bottom:1px solid var(--line); }
+  .order h2{ font-size:26px; margin-bottom:6px; }
+  .order .lede{ color:#5A6672; font-size:14.5px; margin-bottom:30px; }
+  .order-grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:32px; align-items:start; }
+  @media (max-width:820px){ .order-grid{ grid-template-columns:1fr; } .steps{ grid-template-columns:repeat(2,1fr); } }
+
+  .product-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:24px; }
+  .variant-toggle{ display:flex; gap:10px; margin:16px 0 20px; }
+  .variant-btn{ flex:1; padding:12px; border-radius:10px; border:1.5px solid var(--line); background:var(--mist); text-align:left; }
+  .variant-btn strong{ display:block; font-size:14px; }
+  .variant-btn span{ font-size:12px; color:#5A6672; font-family:'IBM Plex Mono',monospace; }
+  .variant-btn.active{ border-color:var(--bottle); background:#fff; box-shadow:inset 0 0 0 1px var(--bottle); }
+
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#5A6672; margin-bottom:6px; }
+  .field input{ width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:'Inter',sans-serif; font-size:15px; }
+  .field input:focus{ border-color:var(--bottle); }
+  .field .hint{ font-size:12px; color:#8A97A0; margin-top:5px; }
+
+  /* cap dial stepper */
+  .dial-row{ display:flex; align-items:center; gap:16px; }
+  .dial-btn{ width:44px; height:44px; border-radius:50%; border:2px solid var(--ink); background:repeating-conic-gradient(var(--ink) 0deg 4deg, transparent 4deg 20deg), var(--cap); background-size:cover; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:var(--ink); position:relative; }
+  .dial-btn::after{ content:''; position:absolute; inset:8px; background:var(--cap); border-radius:50%; }
+  .dial-btn span{ position:relative; z-index:2; }
+  .dial-qty{ font-family:'IBM Plex Mono',monospace; font-size:22px; min-width:28px; text-align:center; }
+
+  .add-btn{ width:100%; margin-top:20px; padding:14px; border-radius:10px; background:var(--bottle); color:#fff; border:none; font-weight:600; font-size:15px; }
+  .add-btn:hover{ background:var(--bottle-deep); }
+
+  /* Docket / cart */
+  .docket{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:24px; position:relative; }
+  .docket::before{ content:'MANIFEST'; position:absolute; top:-11px; left:20px; background:var(--paper); padding:0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:#8A97A0; }
+  .docket h3{ font-size:15px; margin-bottom:14px; }
+  .empty-cart{ font-size:13.5px; color:#8A97A0; padding:20px 0; text-align:center; border:1px dashed var(--line); border-radius:10px; }
+  .cart-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+  .cart-item .meta{ color:#8A97A0; font-size:12px; font-family:'IBM Plex Mono',monospace; }
+  .cart-item button{ background:none; border:none; color:var(--bad); font-size:12px; text-decoration:underline; }
+  .cart-total{ display:flex; justify-content:space-between; padding-top:14px; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:16px; }
+
+  .checkout-form{ margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
+  .confirm-btn{ width:100%; padding:15px; border-radius:10px; background:var(--cap); border:none; font-weight:700; font-size:15px; box-shadow:0 2px 0 var(--cap-deep); }
+  .confirm-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .form-status{ font-size:13px; margin-top:10px; text-align:center; }
+  .form-status.err{ color:var(--bad); }
+  .form-status.ok{ color:var(--good); }
+
+  /* My orders */
+  .myorders{ padding:56px 0; border-bottom:1px solid var(--line); }
+  .myorders h2{ font-size:26px; margin-bottom:6px; }
+  .myorders .lede{ color:#5A6672; font-size:14.5px; margin-bottom:24px; }
+  .lookup-row{ display:flex; gap:10px; max-width:420px; margin-bottom:24px; }
+  .lookup-row input{ flex:1; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); font-size:15px; }
+  .lookup-row button{ padding:12px 20px; border-radius:10px; border:1.5px solid var(--ink); background:transparent; font-weight:600; }
+  table.orders-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.orders-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#8A97A0; padding:8px 10px; border-bottom:1px solid var(--line); }
+  table.orders-table td{ padding:10px; border-bottom:1px solid var(--line); }
+  .badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 8px; border-radius:999px; text-transform:uppercase; }
+  .badge.pending{ background:#FCEBC7; color:#8A5A00; }
+  .badge.confirmed{ background:var(--mist); color:var(--bottle-deep); }
+  .badge.delivered{ background:#DCEFE1; color:var(--good); }
+  .badge.cancelled{ background:#F5DCD4; color:var(--bad); }
+
+  footer{ padding:36px 24px; text-align:center; font-size:13px; color:#8A97A0; }
+  .dev-banner{ background:#FCEBC7; color:#8A5A00; font-size:12.5px; text-align:center; padding:8px 16px; font-family:'IBM Plex Mono',monospace; }
+</style>
+</head>
+<body>
+
+<div id="devBanner" class="dev-banner" style="display:none;">
+  ⚠ Supabase isn't configured yet — edit the CONFIG object at the bottom of the file with your project URL and anon key.
+</div>
+
+<header>
+  <div class="nav">
+    <div class="brand">20L<span class="dot">.</span></div>
+    <div class="navlinks">
+      <a href="#order">Order</a>
+      <a href="#myorders">My orders</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <div class="route">
+      <span class="step">Warehouse</span><span class="arrow">→</span>
+      <span class="step">Your Room</span><span class="arrow">→</span>
+      <span class="step">Refilled</span>
+    </div>
+    <h1>Water, delivered<br><em>down the hall.</em></h1>
+    <p class="sub">20L Bisleri bottles, brought straight to your hostel room. Buy once, refill forever — no more warehouse runs.</p>
+    <div class="cta-row">
+      <a href="#order" class="btn btn-primary">Order water →</a>
+      <span class="price-tag">₹160 new bottle · ₹160 per refill</span>
+    </div>
+  </div>
+</section>
+
+<section class="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step-card"><div class="step-num">01</div><h3>Buy your bottle</h3><p>One-time ₹160 gets you a 20L bottle to keep in your room.</p></div>
+      <div class="step-card"><div class="step-num">02</div><h3>Order a refill</h3><p>Empty bottle? Order a refill any time for ₹160.</p></div>
+      <div class="step-card"><div class="step-num">03</div><h3>Pick a delivery day</h3><p>Choose a date at least 2 days out so we can route it.</p></div>
+      <div class="step-card"><div class="step-num">04</div><h3>Confirm on WhatsApp</h3><p>We message you to confirm and collect payment at the door.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="order" id="order">
+  <div class="wrap">
+    <h2>Place an order</h2>
+    <p class="lede">Add bottles to your manifest, then check out.</p>
+    <div class="order-grid">
+
+      <div class="product-card">
+        <h3 style="font-size:18px;">20L Bisleri Bottle</h3>
+        <div class="variant-toggle">
+          <button class="variant-btn active" data-variant="new" onclick="selectVariant('new')">
+            <strong>New bottle</strong><span>₹160</span>
+          </button>
+          <button class="variant-btn" data-variant="refill" onclick="selectVariant('refill')">
+            <strong>Refill</strong><span>₹160</span>
+          </button>
+        </div>
+
+        <div class="field">
+          <label>Quantity</label>
+          <div class="dial-row">
+            <button class="dial-btn" onclick="changeQty(-1)" aria-label="Decrease quantity"><span>−</span></button>
+            <div class="dial-qty" id="qtyDisplay">1</div>
+            <button class="dial-btn" onclick="changeQty(1)" aria-label="Increase quantity"><span>+</span></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="deliveryDate">Delivery date</label>
+          <input type="date" id="deliveryDate">
+          <div class="hint">Must be at least 2 days from today.</div>
+        </div>
+
+        <button class="add-btn" onclick="addToCart()">Add to manifest</button>
+      </div>
+
+      <div class="docket">
+        <h3>Your order</h3>
+        <div id="cartList"><div class="empty-cart">No items yet — add a bottle to get started.</div></div>
+        <div class="cart-total" id="cartTotal" style="display:none;">
+          <span>Total</span><span class="mono">₹0</span>
+        </div>
+
+        <div class="checkout-form" id="checkoutForm" style="display:none;">
+          <div class="field"><label for="custName">Name</label><input type="text" id="custName" placeholder="Your name"></div>
+          <div class="field"><label for="custRoom">Room / block</label><input type="text" id="custRoom" placeholder="e.g. Block C, Room 214"></div>
+          <div class="field"><label for="custPhone">Phone number</label><input type="tel" id="custPhone" placeholder="10-digit number"></div>
+          <button class="confirm-btn" onclick="checkout()">Confirm & send on WhatsApp</button>
+          <div class="form-status" id="formStatus"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="myorders" id="myorders">
+  <div class="wrap">
+    <h2>My orders</h2>
+    <p class="lede">Look up your order history by phone number.</p>
+    <div class="lookup-row">
+      <input type="tel" id="lookupPhone" placeholder="Enter your phone number">
+      <button onclick="lookupOrders()">Look up</button>
+    </div>
+    <div id="ordersResult"></div>
+  </div>
+</section>
+
+<footer>
+  Run by three people, one hostel room, and a lot of 20L bottles.
+</footer>
+
+<script>
+// ====================== CONFIG — edit these three lines ======================
+const CONFIG = {
+  SUPABASE_URL: "https://riiraorfigtblffdcokx.supabase.co",     // e.g. https://abcxyz.supabase.co
+  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXJhb3JmaWd0YmxmZmRjb2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NDYxMzcsImV4cCI6MjEwMzMyMjEzN30.aCPNNKbd239fMEwY1wQkheI8Xk-GFZDaYyLGr25Jfig",
+  WHATSAPP_NUMBER: "918800218513"                // country code + number, no + or spaces
+};
+// ===============================================================================
+
+let supabase = null;
+const isConfigured = CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.startsWith("YOUR_");
+if (isConfigured) {
+  supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+} else {
+  document.getElementById('devBanner').style.display = 'block';
+}
+
+// ---- date min setup ----
+const dateInput = document.getElementById('deliveryDate');
+function minDeliveryDate(){
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  return d.toISOString().split('T')[0];
+}
+dateInput.min = minDeliveryDate();
+dateInput.value = minDeliveryDate();
+
+// ---- variant + qty state ----
+let currentVariant = 'new';
+let currentQty = 1;
+function selectVariant(v){
+  currentVariant = v;
+  document.querySelectorAll('.variant-btn').forEach(b => b.classList.toggle('active', b.dataset.variant === v));
+}
+function changeQty(delta){
+  currentQty = Math.max(1, Math.min(20, currentQty + delta));
+  document.getElementById('qtyDisplay').textContent = currentQty;
+}
+
+// ---- cart ----
+let cart = [];
+const PRICE = 160;
+
+function addToCart(){
+  const date = dateInput.value;
+  if (!date || date < minDeliveryDate()){
+    alert('Pick a delivery date at least 2 days from today.');
+    return;
+  }
+  cart.push({ variant: currentVariant, qty: currentQty, date });
+  currentQty = 1;
+  document.getElementById('qtyDisplay').textContent = 1;
+  renderCart();
+}
+
+function removeFromCart(index){
+  cart.splice(index, 1);
+  renderCart();
+}
+
+function renderCart(){
+  const list = document.getElementById('cartList');
+  const totalRow = document.getElementById('cartTotal');
+  const checkoutForm = document.getElementById('checkoutForm');
+
+  if (cart.length === 0){
+    list.innerHTML = '<div class="empty-cart">No items yet — add a bottle to get started.</div>';
+    totalRow.style.display = 'none';
+    checkoutForm.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = cart.map((item, i) => `
+    <div class="cart-item">
+      <div>
+        <div>${item.qty} × ${item.variant === 'new' ? 'New bottle' : 'Refill'}</div>
+        <div class="meta">delivery ${item.date}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="mono">₹${item.qty * PRICE}</span>
+        <button onclick="removeFromCart(${i})">remove</button>
+      </div>
+    </div>
+  `).join('');
+
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE, 0);
+  totalRow.style.display = 'flex';
+  totalRow.querySelector('span:last-child').textContent = `₹${total}`;
+  totalRow.querySelector('span:last-child').classList.add('mono');
+  checkoutForm.style.display = 'block';
+}
+
+// ---- checkout ----
+async function checkout(){
+  const name = document.getElementById('custName').value.trim();
+  const room = document.getElementById('custRoom').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+  const statusEl = document.getElementById('formStatus');
+  const btn = document.querySelector('.confirm-btn');
+
+  if (!name || !room || !phone){
+    statusEl.textContent = 'Fill in your name, room, and phone number.';
+    statusEl.className = 'form-status err';
+    return;
+  }
+  if (cart.length === 0) return;
+
+  btn.disabled = true;
+  statusEl.textContent = 'Placing order…';
+  statusEl.className = 'form-status';
+
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE, 0);
+
+  if (isConfigured){
+    try {
+      const rows = cart.map(item => ({
+        customer_name: name,
+        room_number: room,
+        phone: phone,
+        item_type: item.variant,
+        quantity: item.qty,
+        delivery_date: item.date,
+        status: 'pending',
+        total_amount: item.qty * PRICE
+      }));
+      const { error } = await supabase.from('orders').insert(rows);
+      if (error) throw error;
+    } catch (err){
+      statusEl.textContent = 'Could not save order — check your Supabase config. You can still send it on WhatsApp.';
+      statusEl.className = 'form-status err';
+    }
+  }
+
+  // Build WhatsApp message
+  const lines = cart.map(item => `• ${item.qty} × ${item.variant === 'new' ? 'New bottle' : 'Refill'} — delivery ${item.date}`);
+  const message = [
+    `New order — 20L`,
+    `Name: ${name}`,
+    `Room: ${room}`,
+    `Phone: ${phone}`,
+    ``,
+    ...lines,
+    ``,
+    `Total: ₹${total}`
+  ].join('\n');
+
+  const waUrl = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  window.open(waUrl, '_blank');
+
+  statusEl.textContent = 'Order sent — finish confirming on WhatsApp.';
+  statusEl.className = 'form-status ok';
+  btn.disabled = false;
+  cart = [];
+  renderCart();
+  document.getElementById('custName').value = '';
+  document.getElementById('custRoom').value = '';
+  document.getElementById('custPhone').value = '';
+}
+
+// ---- my orders lookup ----
+async function lookupOrders(){
+  const phone = document.getElementById('lookupPhone').value.trim();
+  const resultEl = document.getElementById('ordersResult');
+  if (!phone){ return; }
+
+  if (!isConfigured){
+    resultEl.innerHTML = '<p style="color:#B4482F; font-size:13.5px;">Supabase isn\'t configured yet, so order history isn\'t available in this preview.</p>';
+    return;
+  }
+
+  resultEl.innerHTML = '<p style="font-size:13.5px; color:#8A97A0;">Looking up orders…</p>';
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('phone', phone)
+    .order('created_at', { ascending: false });
+
+  if (error){
+    resultEl.innerHTML = '<p style="color:#B4482F; font-size:13.5px;">Something went wrong looking that up.</p>';
+    return;
+  }
+  if (!data || data.length === 0){
+    resultEl.innerHTML = '<p style="font-size:13.5px; color:#8A97A0;">No orders found for that number.</p>';
+    return;
+  }
+
+  resultEl.innerHTML = `
+    <table class="orders-table">
+      <thead><tr><th>Date placed</th><th>Item</th><th>Qty</th><th>Delivery</th><th>Total</th><th>Status</th></tr></thead>
+      <tbody>
+        ${data.map(o => `
+          <tr>
+            <td>${new Date(o.created_at).toLocaleDateString()}</td>
+            <td>${o.item_type === 'new' ? 'New bottle' : 'Refill'}</td>
+            <td>${o.quantity}</td>
+            <td>${o.delivery_date}</td>
+            <td class="mono">₹${o.total_amount}</td>
+            <td><span class="badge ${o.status}">${o.status}</span></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+</script>
+</body>
+</html>
