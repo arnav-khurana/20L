@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>20L — Water, delivered down the hall</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2C16 2 6 15 6 21a10 10 0 0 0 20 0C26 15 16 2 16 2Z' fill='%231C6E8C'/%3E%3Cpath d='M16 6C16 6 9.5 15.8 9.5 21A6.5 6.5 0 0 0 22.5 21C22.5 15.8 16 6 16 6Z' fill='%23F5F2EA' fill-opacity='0.18'/%3E%3Ccircle cx='13' cy='22' r='2' fill='%23F4B942'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -88,8 +89,15 @@
   .field{ margin-bottom:16px; }
   .field label{ display:block; font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#5A6672; margin-bottom:6px; }
   .field input{ width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:'Inter',sans-serif; font-size:15px; }
-  .field input:focus{ border-color:var(--bottle); }
+  .field input:focus, .field select:focus{ border-color:var(--bottle); }
   .field .hint{ font-size:12px; color:#8A97A0; margin-top:5px; }
+  .field select{ width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:'Inter',sans-serif; font-size:15px; }
+
+  .pay-panel{ margin-top:20px; padding-top:18px; border-top:1px solid var(--line); text-align:center; }
+  .pay-panel img{ width:200px; height:200px; border-radius:10px; border:1px solid var(--line); }
+  .pay-amount{ font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; margin:12px 0 4px; }
+  .pay-hint{ font-size:12.5px; color:#5A6672; margin-bottom:16px; }
+  .back-link{ background:none; border:none; text-decoration:underline; font-size:13px; color:#5A6672; margin-top:10px; }
 
   /* cap dial stepper */
   .dial-row{ display:flex; align-items:center; gap:16px; }
@@ -162,7 +170,7 @@
       <span class="step">Refilled</span>
     </div>
     <h1>Water, delivered<br><em>down the hall.</em></h1>
-    <p class="sub">20L Bisleri bottles, brought straight to your hostel. Buy once, refill forever — no more mini-mart runs.</p>
+    <p class="sub">20L Bisleri bottles, brought straight to your hostel room. Buy once, refill forever — no more warehouse runs.</p>
     <div class="cta-row">
       <a href="#order" class="btn btn-primary">Order water →</a>
       <span class="price-tag">₹160 new bottle · ₹160 per refill</span>
@@ -209,9 +217,35 @@
         </div>
 
         <div class="field">
+          <label>When</label>
+          <div class="variant-toggle">
+            <button class="variant-btn active" data-when="once" onclick="selectWhen('once')">
+              <strong>One-time</strong><span>pick a date</span>
+            </button>
+            <button class="variant-btn" data-when="recurring" onclick="selectWhen('recurring')">
+              <strong>Recurring</strong><span>every week</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field" id="onceField">
           <label for="deliveryDate">Delivery date</label>
           <input type="date" id="deliveryDate">
           <div class="hint">Must be at least 2 days from today.</div>
+        </div>
+
+        <div class="field" id="recurringField" style="display:none;">
+          <label for="recurringDay">Delivery day, every week</label>
+          <select id="recurringDay">
+            <option value="mon">Monday</option>
+            <option value="tue">Tuesday</option>
+            <option value="wed">Wednesday</option>
+            <option value="thu">Thursday</option>
+            <option value="fri">Friday</option>
+            <option value="sat">Saturday</option>
+            <option value="sun">Sunday</option>
+          </select>
+          <div class="hint">We'll deliver on this day every week until you cancel.</div>
         </div>
 
         <button class="add-btn" onclick="addToCart()">Add to manifest</button>
@@ -228,8 +262,18 @@
           <div class="field"><label for="custName">Name</label><input type="text" id="custName" placeholder="Your name"></div>
           <div class="field"><label for="custRoom">Room / block</label><input type="text" id="custRoom" placeholder="e.g. Block C, Room 214"></div>
           <div class="field"><label for="custPhone">Phone number</label><input type="tel" id="custPhone" placeholder="10-digit number"></div>
-          <button class="confirm-btn" onclick="checkout()">Confirm & send on WhatsApp</button>
+          <button class="confirm-btn" id="toPaymentBtn" onclick="goToPayment()">Continue to payment</button>
           <div class="form-status" id="formStatus"></div>
+        </div>
+
+        <div class="pay-panel" id="payPanel" style="display:none;">
+          <div style="font-size:13px; color:#5A6672; margin-bottom:10px;">Scan with any UPI app</div>
+          <img id="upiQr" src="" alt="UPI payment QR code">
+          <div class="pay-amount mono" id="payAmount"></div>
+          <div class="pay-hint">Pay this amount, then tap below — we'll confirm your order on WhatsApp.</div>
+          <button class="confirm-btn" onclick="checkout()">I've paid — send on WhatsApp</button>
+          <button class="back-link" onclick="backToForm()">← back to details</button>
+          <div class="form-status" id="payStatus"></div>
         </div>
       </div>
 
@@ -258,17 +302,20 @@
 const CONFIG = {
   SUPABASE_URL: "https://riiraorfigtblffdcokx.supabase.co",     // e.g. https://abcxyz.supabase.co
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXJhb3JmaWd0YmxmZmRjb2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NDYxMzcsImV4cCI6MjEwMzMyMjEzN30.aCPNNKbd239fMEwY1wQkheI8Xk-GFZDaYyLGr25Jfig",
-  WHATSAPP_NUMBER: "918800218513"                // country code + number, no + or spaces
+  WHATSAPP_NUMBER: "918800218513",               // country code + number, no + or spaces
+  UPI_ID: "yourname@upi",                        // your UPI ID, e.g. 9876543210@okhdfcbank
+  UPI_PAYEE_NAME: "20L"                          // name shown in the customer's UPI app
 };
 // ===============================================================================
 
+// ---- state (declared up top so a Supabase load failure never breaks the rest) ----
 let supabase = null;
-const isConfigured = CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.startsWith("YOUR_");
-if (isConfigured) {
-  supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
-} else {
-  document.getElementById('devBanner').style.display = 'block';
-}
+let isConfigured = false;
+let currentVariant = 'new';
+let currentWhen = 'once';
+let currentQty = 1;
+let cart = [];
+const PRICE = 160;
 
 // ---- date min setup ----
 const dateInput = document.getElementById('deliveryDate');
@@ -280,29 +327,55 @@ function minDeliveryDate(){
 dateInput.min = minDeliveryDate();
 dateInput.value = minDeliveryDate();
 
-// ---- variant + qty state ----
-let currentVariant = 'new';
-let currentQty = 1;
+// ---- Supabase init (wrapped so a blocked/failed CDN load can't break buttons) ----
+try {
+  isConfigured = CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.startsWith("YOUR_");
+  if (isConfigured) {
+    if (typeof window.supabase === 'undefined') throw new Error('Supabase library did not load');
+    supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  } else {
+    document.getElementById('devBanner').style.display = 'block';
+  }
+} catch (err) {
+  console.error('Supabase init failed:', err);
+  supabase = null;
+  isConfigured = false;
+  const banner = document.getElementById('devBanner');
+  banner.textContent = '⚠ Could not connect to the order database (offline, or the CDN script was blocked). Adding items and WhatsApp checkout still work — order history and saved records won\'t.';
+  banner.style.display = 'block';
+}
+
+// ---- variant + when + qty state ----
 function selectVariant(v){
   currentVariant = v;
-  document.querySelectorAll('.variant-btn').forEach(b => b.classList.toggle('active', b.dataset.variant === v));
+  document.querySelectorAll('[data-variant]').forEach(b => b.classList.toggle('active', b.dataset.variant === v));
+}
+function selectWhen(w){
+  currentWhen = w;
+  document.querySelectorAll('[data-when]').forEach(b => b.classList.toggle('active', b.dataset.when === w));
+  document.getElementById('onceField').style.display = (w === 'once') ? 'block' : 'none';
+  document.getElementById('recurringField').style.display = (w === 'recurring') ? 'block' : 'none';
 }
 function changeQty(delta){
   currentQty = Math.max(1, Math.min(20, currentQty + delta));
   document.getElementById('qtyDisplay').textContent = currentQty;
 }
 
-// ---- cart ----
-let cart = [];
-const PRICE = 160;
+const DAY_LABELS = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
 
 function addToCart(){
-  const date = dateInput.value;
-  if (!date || date < minDeliveryDate()){
-    alert('Pick a delivery date at least 2 days from today.');
-    return;
+  let item = { variant: currentVariant, qty: currentQty, mode: currentWhen };
+  if (currentWhen === 'once'){
+    const date = dateInput.value;
+    if (!date || date < minDeliveryDate()){
+      alert('Pick a delivery date at least 2 days from today.');
+      return;
+    }
+    item.date = date;
+  } else {
+    item.day = document.getElementById('recurringDay').value;
   }
-  cart.push({ variant: currentVariant, qty: currentQty, date });
+  cart.push(item);
   currentQty = 1;
   document.getElementById('qtyDisplay').textContent = 1;
   renderCart();
@@ -317,11 +390,15 @@ function renderCart(){
   const list = document.getElementById('cartList');
   const totalRow = document.getElementById('cartTotal');
   const checkoutForm = document.getElementById('checkoutForm');
+  const payPanel = document.getElementById('payPanel');
+
+  // any cart change resets an in-progress payment back to the details step
+  payPanel.style.display = 'none';
+  checkoutForm.style.display = cart.length ? 'block' : 'none';
 
   if (cart.length === 0){
     list.innerHTML = '<div class="empty-cart">No items yet — add a bottle to get started.</div>';
     totalRow.style.display = 'none';
-    checkoutForm.style.display = 'none';
     return;
   }
 
@@ -329,7 +406,7 @@ function renderCart(){
     <div class="cart-item">
       <div>
         <div>${item.qty} × ${item.variant === 'new' ? 'New bottle' : 'Refill'}</div>
-        <div class="meta">delivery ${item.date}</div>
+        <div class="meta">${item.mode === 'once' ? `delivery ${item.date}` : `every ${DAY_LABELS[item.day]}`}</div>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
         <span class="mono">₹${item.qty * PRICE}</span>
@@ -342,22 +419,45 @@ function renderCart(){
   totalRow.style.display = 'flex';
   totalRow.querySelector('span:last-child').textContent = `₹${total}`;
   totalRow.querySelector('span:last-child').classList.add('mono');
-  checkoutForm.style.display = 'block';
 }
 
-// ---- checkout ----
-async function checkout(){
+// ---- checkout: details -> payment (UPI QR) -> WhatsApp confirm ----
+function goToPayment(){
   const name = document.getElementById('custName').value.trim();
   const room = document.getElementById('custRoom').value.trim();
   const phone = document.getElementById('custPhone').value.trim();
   const statusEl = document.getElementById('formStatus');
-  const btn = document.querySelector('.confirm-btn');
 
   if (!name || !room || !phone){
     statusEl.textContent = 'Fill in your name, room, and phone number.';
     statusEl.className = 'form-status err';
     return;
   }
+  if (cart.length === 0) return;
+  statusEl.textContent = '';
+  statusEl.className = 'form-status';
+
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE, 0);
+  const upiString = `upi://pay?pa=${encodeURIComponent(CONFIG.UPI_ID)}&pn=${encodeURIComponent(CONFIG.UPI_PAYEE_NAME)}&am=${total}&cu=INR&tn=${encodeURIComponent('20L order - ' + name)}`;
+  document.getElementById('upiQr').src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiString)}`;
+  document.getElementById('payAmount').textContent = `₹${total}`;
+
+  document.getElementById('checkoutForm').style.display = 'none';
+  document.getElementById('payPanel').style.display = 'block';
+}
+
+function backToForm(){
+  document.getElementById('payPanel').style.display = 'none';
+  document.getElementById('checkoutForm').style.display = 'block';
+}
+
+async function checkout(){
+  const name = document.getElementById('custName').value.trim();
+  const room = document.getElementById('custRoom').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+  const statusEl = document.getElementById('payStatus');
+  const btn = document.querySelector('#payPanel .confirm-btn');
+
   if (cart.length === 0) return;
 
   btn.disabled = true;
@@ -374,20 +474,24 @@ async function checkout(){
         phone: phone,
         item_type: item.variant,
         quantity: item.qty,
-        delivery_date: item.date,
+        order_mode: item.mode,
+        delivery_date: item.mode === 'once' ? item.date : null,
+        recurring_day: item.mode === 'recurring' ? item.day : null,
         status: 'pending',
+        payment_status: 'claimed',
         total_amount: item.qty * PRICE
       }));
       const { error } = await supabase.from('orders').insert(rows);
       if (error) throw error;
     } catch (err){
-      statusEl.textContent = 'Could not save order — check your Supabase config. You can still send it on WhatsApp.';
+      console.error('Supabase insert failed:', err);
+      statusEl.textContent = 'Could not save order to the database, but you can still send it on WhatsApp.';
       statusEl.className = 'form-status err';
     }
   }
 
   // Build WhatsApp message
-  const lines = cart.map(item => `• ${item.qty} × ${item.variant === 'new' ? 'New bottle' : 'Refill'} — delivery ${item.date}`);
+  const lines = cart.map(item => `• ${item.qty} × ${item.variant === 'new' ? 'New bottle' : 'Refill'} — ${item.mode === 'once' ? `delivery ${item.date}` : `every ${DAY_LABELS[item.day]}`}`);
   const message = [
     `New order — 20L`,
     `Name: ${name}`,
@@ -396,13 +500,13 @@ async function checkout(){
     ``,
     ...lines,
     ``,
-    `Total: ₹${total}`
+    `Total: ₹${total} (paid via UPI, screenshot attached)`
   ].join('\n');
 
   const waUrl = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   window.open(waUrl, '_blank');
 
-  statusEl.textContent = 'Order sent — finish confirming on WhatsApp.';
+  statusEl.textContent = 'Order sent — attach your payment screenshot on WhatsApp to confirm.';
   statusEl.className = 'form-status ok';
   btn.disabled = false;
   cart = [];
@@ -448,7 +552,7 @@ async function lookupOrders(){
             <td>${new Date(o.created_at).toLocaleDateString()}</td>
             <td>${o.item_type === 'new' ? 'New bottle' : 'Refill'}</td>
             <td>${o.quantity}</td>
-            <td>${o.delivery_date}</td>
+            <td>${o.order_mode === 'recurring' ? `every ${DAY_LABELS[o.recurring_day] || o.recurring_day}` : o.delivery_date}</td>
             <td class="mono">₹${o.total_amount}</td>
             <td><span class="badge ${o.status}">${o.status}</span></td>
           </tr>
