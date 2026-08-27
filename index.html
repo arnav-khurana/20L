@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <style>
   :root{
     --ink:#142433;
@@ -40,12 +41,15 @@
 
   /* Header */
   header{ position:sticky; top:0; z-index:50; background:rgba(245,242,234,.9); backdrop-filter:blur(6px); border-bottom:1px solid var(--line); }
-  .nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; max-width:1040px; margin:0 auto; }
+  .nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; max-width:1040px; margin:0 auto; gap:16px; }
   .brand{ display:flex; align-items:baseline; gap:6px; font-size:22px; font-weight:700; }
   .brand .dot{ color:var(--cap-deep); }
-  .navlinks{ display:flex; gap:22px; font-size:14px; font-weight:500; }
+  .navlinks{ display:flex; align-items:center; gap:22px; font-size:14px; font-weight:500; }
   .navlinks a{ text-decoration:none; color:var(--ink); opacity:.75; }
   .navlinks a:hover{ opacity:1; }
+  .nav-account{ display:flex; align-items:center; gap:10px; font-size:13px; }
+  .nav-account button{ background:none; border:1.5px solid var(--ink); border-radius:999px; padding:7px 14px; font-weight:600; font-size:13px; }
+  .nav-account .who{ color:#5A6672; }
 
   /* Hero */
   .hero{ padding:72px 0 56px; border-bottom:1px solid var(--line); }
@@ -88,10 +92,9 @@
 
   .field{ margin-bottom:16px; }
   .field label{ display:block; font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#5A6672; margin-bottom:6px; }
-  .field input{ width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:'Inter',sans-serif; font-size:15px; }
+  .field input, .field select{ width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:'Inter',sans-serif; font-size:15px; }
   .field input:focus, .field select:focus{ border-color:var(--bottle); }
   .field .hint{ font-size:12px; color:#8A97A0; margin-top:5px; }
-  .field select{ width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:'Inter',sans-serif; font-size:15px; }
 
   .pay-panel{ margin-top:20px; padding-top:18px; border-top:1px solid var(--line); text-align:center; }
   .pay-panel img{ width:200px; height:200px; border-radius:10px; border:1px solid var(--line); }
@@ -102,7 +105,7 @@
   /* cap dial stepper */
   .dial-row{ display:flex; align-items:center; gap:16px; }
   .dial-btn{ width:44px; height:44px; border-radius:50%; border:2px solid var(--ink); background:repeating-conic-gradient(var(--ink) 0deg 4deg, transparent 4deg 20deg), var(--cap); background-size:cover; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:var(--ink); position:relative; }
-  .dial-btn::after{ content:''; position:absolute; inset:8px; background:var(--cap); border-radius:50%; }
+  .dial-btn::after{ content:''; position:absolute; inset:8px; background:var(--cap); border-radius:50%; pointer-events:none; }
   .dial-btn span{ position:relative; z-index:2; }
   .dial-qty{ font-family:'IBM Plex Mono',monospace; font-size:22px; min-width:28px; text-align:center; }
 
@@ -125,25 +128,44 @@
   .form-status{ font-size:13px; margin-top:10px; text-align:center; }
   .form-status.err{ color:var(--bad); }
   .form-status.ok{ color:var(--good); }
+  .login-gate{ text-align:center; padding:20px 0; border-top:1px solid var(--line); margin-top:20px; }
+  .login-gate p{ font-size:13.5px; color:#5A6672; margin:0 0 12px; }
+  .login-gate .row{ display:flex; gap:10px; justify-content:center; }
 
   /* My orders */
   .myorders{ padding:56px 0; border-bottom:1px solid var(--line); }
   .myorders h2{ font-size:26px; margin-bottom:6px; }
   .myorders .lede{ color:#5A6672; font-size:14.5px; margin-bottom:24px; }
-  .lookup-row{ display:flex; gap:10px; max-width:420px; margin-bottom:24px; }
-  .lookup-row input{ flex:1; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); font-size:15px; }
-  .lookup-row button{ padding:12px 20px; border-radius:10px; border:1.5px solid var(--ink); background:transparent; font-weight:600; }
   table.orders-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
   table.orders-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#8A97A0; padding:8px 10px; border-bottom:1px solid var(--line); }
   table.orders-table td{ padding:10px; border-bottom:1px solid var(--line); }
+  table.orders-table tr.clickable{ cursor:pointer; }
+  table.orders-table tr.clickable:hover{ background:var(--mist); }
   .badge{ font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 8px; border-radius:999px; text-transform:uppercase; }
   .badge.pending{ background:#FCEBC7; color:#8A5A00; }
   .badge.confirmed{ background:var(--mist); color:var(--bottle-deep); }
   .badge.delivered{ background:#DCEFE1; color:var(--good); }
   .badge.cancelled{ background:#F5DCD4; color:var(--bad); }
+  .badge.unpaid{ background:#F5DCD4; color:var(--bad); }
+  .badge.claimed{ background:#FCEBC7; color:#8A5A00; }
 
   footer{ padding:36px 24px; text-align:center; font-size:13px; color:#8A97A0; }
+  footer a{ text-decoration:underline; opacity:.7; }
   .dev-banner{ background:#FCEBC7; color:#8A5A00; font-size:12.5px; text-align:center; padding:8px 16px; font-family:'IBM Plex Mono',monospace; }
+
+  /* Modal (auth + combo) */
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(20,36,51,.55); display:none; align-items:center; justify-content:center; z-index:200; padding:20px; }
+  .modal-backdrop.open{ display:flex; }
+  .modal{ background:#fff; border-radius:var(--radius); padding:28px; max-width:420px; width:100%; max-height:90vh; overflow-y:auto; position:relative; }
+  .modal h3{ font-size:20px; margin-bottom:4px; }
+  .modal .modal-sub{ font-size:13.5px; color:#5A6672; margin-bottom:18px; }
+  .modal-close{ position:absolute; top:16px; right:16px; background:none; border:none; font-size:20px; color:#8A97A0; }
+  .auth-tabs{ display:flex; gap:8px; margin-bottom:20px; }
+  .auth-tab{ flex:1; padding:10px; border-radius:10px; border:1.5px solid var(--line); background:var(--mist); font-weight:600; font-size:13.5px; }
+  .auth-tab.active{ background:var(--bottle); border-color:var(--bottle); color:#fff; }
+  .combo-price{ font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:700; color:var(--bottle-deep); text-align:center; margin:14px 0; }
+  .combo-note{ font-size:13px; color:#5A6672; text-align:center; margin-bottom:20px; }
+
 </style>
 </head>
 <body>
@@ -159,6 +181,9 @@
       <a href="#order">Order</a>
       <a href="#myorders">My orders</a>
     </div>
+    <div class="nav-account" id="navAccount">
+      <button onclick="openAuthModal('login')">Log in</button>
+    </div>
   </div>
 </header>
 
@@ -173,7 +198,7 @@
     <p class="sub">20L Bisleri bottles, brought straight to your hostel room. Buy once, refill forever — no more warehouse runs.</p>
     <div class="cta-row">
       <a href="#order" class="btn btn-primary">Order water →</a>
-      <span class="price-tag">₹160 new bottle · ₹160 per refill</span>
+      <span class="price-tag">₹160 new bottle · ₹160 refill · ₹320 combo</span>
     </div>
   </div>
 </section>
@@ -182,10 +207,10 @@
   <div class="wrap">
     <h2>How it works</h2>
     <div class="steps">
-      <div class="step-card"><div class="step-num">01</div><h3>Buy your bottle</h3><p>One-time ₹160 gets you a 20L bottle to keep in your room.</p></div>
-      <div class="step-card"><div class="step-num">02</div><h3>Order a refill</h3><p>Empty bottle? Order a refill any time for ₹160.</p></div>
-      <div class="step-card"><div class="step-num">03</div><h3>Pick a delivery day</h3><p>Choose a date at least 2 days out so we can route it.</p></div>
-      <div class="step-card"><div class="step-num">04</div><h3>Confirm on WhatsApp</h3><p>We message you to confirm and collect payment at the door.</p></div>
+      <div class="step-card"><div class="step-num">01</div><h3>Make an account</h3><p>Sign up once with your name, room, and phone — no re-typing it every order.</p></div>
+      <div class="step-card"><div class="step-num">02</div><h3>Add bottles</h3><p>New bottle, refill, or the combo — pick a one-time date or a weekly recurring day.</p></div>
+      <div class="step-card"><div class="step-num">03</div><h3>Pay by UPI</h3><p>Scan the QR for the order total, right in your UPI app.</p></div>
+      <div class="step-card"><div class="step-num">04</div><h3>Confirm on WhatsApp</h3><p>Send your payment screenshot and we'll get it moving.</p></div>
     </div>
   </div>
 </section>
@@ -204,6 +229,9 @@
           </button>
           <button class="variant-btn" data-variant="refill" onclick="selectVariant('refill')">
             <strong>Refill</strong><span>₹160</span>
+          </button>
+          <button class="variant-btn" data-variant="combo" onclick="selectVariant('combo')">
+            <strong>Combo</strong><span>₹320</span>
           </button>
         </div>
 
@@ -258,9 +286,50 @@
           <span>Total</span><span class="mono">₹0</span>
         </div>
 
+        <div class="login-gate" id="loginGate" style="display:none;">
+          <p>Log in or make an account to check out.</p>
+          <div class="row">
+            <button class="btn btn-ghost" onclick="openAuthModal('login')">Log in</button>
+            <button class="btn btn-primary" onclick="openAuthModal('signup')">Sign up</button>
+          </div>
+        </div>
+
         <div class="checkout-form" id="checkoutForm" style="display:none;">
           <div class="field"><label for="custName">Name</label><input type="text" id="custName" placeholder="Your name"></div>
-          <div class="field"><label for="custRoom">Room / block</label><input type="text" id="custRoom" placeholder="e.g. Block C, Room 214"></div>
+          <div class="field">
+            <label for="custHostel">Hostel</label>
+            <input type="text" id="custHostel" list="hostelOptions" placeholder="Type to search…" autocomplete="off">
+            <datalist id="hostelOptions">
+              <option value="Sunderbans 1A"></option>
+              <option value="Chilika 1B"></option>
+              <option value="Kaziranga 2BX"></option>
+              <option value="Kaziranga 2B"></option>
+              <option value="Hemis 2A"></option>
+              <option value="Periyar 2C"></option>
+              <option value="Gir 3A"></option>
+              <option value="Dibang 3B"></option>
+              <option value="Kanha 3C"></option>
+              <option value="Manas 4A"></option>
+              <option value="Marine 4B"></option>
+              <option value="Mudumalai 4C"></option>
+              <option value="Betla 5A"></option>
+              <option value="Bandhavgarh 5C"></option>
+              <option value="Bandipur 5B"></option>
+              <option value="Sariska 6A"></option>
+              <option value="Sariska 6B"></option>
+              <option value="Eagle Nest"></option>
+              <option value="Tower 6"></option>
+              <option value="Tower 9"></option>
+            </datalist>
+          </div>
+          <div class="field"><label for="custRoomNumber">Room number</label><input type="text" id="custRoomNumber" placeholder="e.g. 214"></div>
+          <div class="field">
+            <label for="custAB">Wing</label>
+            <select id="custAB">
+              <option value="A">A</option>
+              <option value="B">B</option>
+            </select>
+          </div>
           <div class="field"><label for="custPhone">Phone number</label><input type="tel" id="custPhone" placeholder="10-digit number"></div>
           <button class="confirm-btn" id="toPaymentBtn" onclick="goToPayment()">Continue to payment</button>
           <div class="form-status" id="formStatus"></div>
@@ -284,11 +353,7 @@
 <section class="myorders" id="myorders">
   <div class="wrap">
     <h2>My orders</h2>
-    <p class="lede">Look up your order history by phone number.</p>
-    <div class="lookup-row">
-      <input type="tel" id="lookupPhone" placeholder="Enter your phone number">
-      <button onclick="lookupOrders()">Look up</button>
-    </div>
+    <p class="lede" id="myOrdersLede">Log in to see your order history.</p>
     <div id="ordersResult"></div>
   </div>
 </section>
@@ -297,16 +362,61 @@
   Run by three people, one hostel room, and a lot of 20L bottles.
 </footer>
 
+<!-- Auth modal (login / sign up) -->
+<div class="modal-backdrop" id="authModalBackdrop">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAuthModal()">×</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Log in</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Sign up</button>
+    </div>
+
+    <div id="loginPane">
+      <h3>Welcome back</h3>
+      <div class="modal-sub">Log in to order and see your history.</div>
+      <div class="field"><label for="loginEmail">Email</label><input type="email" id="loginEmail"></div>
+      <div class="field"><label for="loginPassword">Password</label><input type="password" id="loginPassword"></div>
+      <button class="confirm-btn" onclick="logIn()">Log in</button>
+      <div class="form-status" id="loginStatus"></div>
+    </div>
+
+    <div id="signupPane" style="display:none;">
+      <h3>Create your account</h3>
+      <div class="modal-sub">One-time setup — we'll remember it for every order.</div>
+      <div class="field"><label for="suName">Name</label><input type="text" id="suName"></div>
+      <div class="field"><label for="suEmail">Email</label><input type="email" id="suEmail"></div>
+      <div class="field"><label for="suPassword">Password</label><input type="password" id="suPassword" placeholder="At least 6 characters"></div>
+      <div class="field">
+        <label for="suHostel">Hostel</label>
+        <input type="text" id="suHostel" list="hostelOptions" placeholder="Type to search…" autocomplete="off">
+      </div>
+      <div class="field"><label for="suRoomNumber">Room number</label><input type="text" id="suRoomNumber" placeholder="e.g. 214"></div>
+      <div class="field">
+        <label for="suAB">Wing</label>
+        <select id="suAB"><option value="A">A</option><option value="B">B</option></select>
+      </div>
+      <div class="field"><label for="suPhone">Phone number</label><input type="tel" id="suPhone"></div>
+      <button class="confirm-btn" onclick="signUp()">Create account</button>
+      <div class="form-status" id="signupStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Combo welcome modal (first-time signups) -->
+<div class="modal-backdrop" id="comboModalBackdrop">
+  <div class="modal">
+    <button class="modal-close" onclick="closeComboModal()">×</button>
+    <h3>Welcome to 20L 🎉</h3>
+    <div class="modal-sub">Since you're just getting set up, most people start with both a new bottle and a refill.</div>
+    <div class="combo-price">₹320</div>
+    <div class="combo-note">1 new bottle + 1 refill, bundled — that's the combo.</div>
+    <button class="confirm-btn" onclick="addComboFromModal()">Add combo to my order</button>
+    <button class="back-link" onclick="closeComboModal()" style="display:block; margin:10px auto 0;">No thanks, I'll pick myself</button>
+  </div>
+</div>
+
 <script>
-// ====================== CONFIG — edit these three lines ======================
-const CONFIG = {
-  SUPABASE_URL: "https://riiraorfigtblffdcokx.supabase.co",     // e.g. https://abcxyz.supabase.co
-  SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXJhb3JmaWd0YmxmZmRjb2t4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NDYxMzcsImV4cCI6MjEwMzMyMjEzN30.aCPNNKbd239fMEwY1wQkheI8Xk-GFZDaYyLGr25Jfig",
-  WHATSAPP_NUMBER: "918800218513",               // country code + number, no + or spaces
-  UPI_ID: "yourname@upi",                        // your UPI ID, e.g. 9876543210@okhdfcbank
-  UPI_PAYEE_NAME: "20L"                          // name shown in the customer's UPI app
-};
-// ===============================================================================
+// ====================== live state ======================
 
 // ---- global error catcher: if ANYTHING throws, show it on-screen instead of failing silently ----
 window.addEventListener('error', function(e){
@@ -320,14 +430,20 @@ window.addEventListener('error', function(e){
   box.textContent = 'JS error: ' + e.message + ' (' + (e.filename || '').split('/').pop() + ':' + e.lineno + ')';
 });
 
-// ---- state (declared up top so a Supabase load failure never breaks the rest) ----
+// ---- state ----
 let db = null;
 let isConfigured = false;
 let currentVariant = 'new';
 let currentWhen = 'once';
 let currentQty = 1;
 let cart = [];
-const PRICE = 160;
+const PRICE_MAP = { new: 160, refill: 160, combo: 320 };
+const ITEM_LABEL = { new: 'New bottle', refill: 'Refill', combo: 'Combo (bottle + refill)' };
+const DAY_LABELS = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
+
+let currentUser = null;      // supabase auth user object, or null
+let currentProfile = null;   // row from `profiles`, or null
+let isAdmin = false;
 
 // ---- date min setup ----
 const dateInput = document.getElementById('deliveryDate');
@@ -353,11 +469,173 @@ try {
   db = null;
   isConfigured = false;
   const banner = document.getElementById('devBanner');
-  banner.textContent = '⚠ Could not connect to the order database (offline, or the CDN script was blocked). Adding items and WhatsApp checkout still work — order history and saved records won\'t.';
+  banner.textContent = '⚠ Could not connect to the database (offline, or the CDN script was blocked). Browsing still works, but login and ordering need a connection.';
   banner.style.display = 'block';
 }
 
-// ---- variant + when + qty state ----
+// =========================================================================
+// AUTH
+// =========================================================================
+function openAuthModal(tab){
+  document.getElementById('authModalBackdrop').classList.add('open');
+  switchAuthTab(tab || 'login');
+}
+function closeAuthModal(){
+  document.getElementById('authModalBackdrop').classList.remove('open');
+}
+function switchAuthTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+  document.getElementById('loginPane').style.display = (tab === 'login') ? 'block' : 'none';
+  document.getElementById('signupPane').style.display = (tab === 'signup') ? 'block' : 'none';
+}
+
+async function signUp(){
+  const statusEl = document.getElementById('signupStatus');
+  const name = document.getElementById('suName').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const password = document.getElementById('suPassword').value;
+  const hostel = document.getElementById('suHostel').value.trim();
+  const roomNumber = document.getElementById('suRoomNumber').value.trim();
+  const wing = document.getElementById('suAB').value;
+  const phone = document.getElementById('suPhone').value.trim();
+
+  if (!name || !email || !password || !hostel || !roomNumber || !phone){
+    statusEl.textContent = 'Fill in every field.'; statusEl.className = 'form-status err'; return;
+  }
+  if (password.length < 6){
+    statusEl.textContent = 'Password needs at least 6 characters.'; statusEl.className = 'form-status err'; return;
+  }
+  if (!isConfigured || !db){
+    statusEl.textContent = 'Not connected to the database right now.'; statusEl.className = 'form-status err'; return;
+  }
+  statusEl.textContent = 'Creating your account…'; statusEl.className = 'form-status';
+
+  try {
+    const { data, error } = await db.auth.signUp({ email, password });
+    if (error) throw error;
+
+    if (!data.session){
+      // Email confirmation is ON in this Supabase project — see SETUP.md to turn it off.
+      statusEl.textContent = 'Check your email to confirm your account, then log in.';
+      statusEl.className = 'form-status ok';
+      return;
+    }
+
+    const { error: profileErr } = await db.from('profiles').insert({
+      id: data.user.id,
+      full_name: name,
+      phone,
+      hostel,
+      room_number: roomNumber,
+      wing,
+      first_order_claimed: false
+    });
+    if (profileErr) throw profileErr;
+
+    await refreshSession();
+    closeAuthModal();
+    openComboModal();
+  } catch (err){
+    console.error('Sign up failed:', err);
+    statusEl.textContent = err.message || 'Could not create account.';
+    statusEl.className = 'form-status err';
+  }
+}
+
+async function logIn(){
+  const statusEl = document.getElementById('loginStatus');
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password){
+    statusEl.textContent = 'Enter your email and password.'; statusEl.className = 'form-status err'; return;
+  }
+  if (!isConfigured || !db){
+    statusEl.textContent = 'Not connected to the database right now.'; statusEl.className = 'form-status err'; return;
+  }
+  statusEl.textContent = 'Logging in…'; statusEl.className = 'form-status';
+  try {
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await refreshSession();
+    closeAuthModal();
+  } catch (err){
+    console.error('Login failed:', err);
+    statusEl.textContent = err.message || 'Could not log in.';
+    statusEl.className = 'form-status err';
+  }
+}
+
+async function logOut(){
+  if (db) await db.auth.signOut();
+  currentUser = null;
+  currentProfile = null;
+  isAdmin = false;
+  renderAccountUI();
+  renderCart();
+  document.getElementById('ordersResult').innerHTML = '';
+  document.getElementById('myOrdersLede').textContent = 'Log in to see your order history.';
+}
+
+async function refreshSession(){
+  if (!db) return;
+  const { data: { session } } = await db.auth.getSession();
+  currentUser = session ? session.user : null;
+
+  if (currentUser){
+    const { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+    currentProfile = profile || null;
+
+    const { data: adminRow } = await db.from('admins').select('id').eq('id', currentUser.id).maybeSingle();
+    isAdmin = !!adminRow;
+
+    if (currentProfile){
+      document.getElementById('custName').value = currentProfile.full_name;
+      document.getElementById('custHostel').value = currentProfile.hostel;
+      document.getElementById('custRoomNumber').value = currentProfile.room_number;
+      document.getElementById('custAB').value = currentProfile.wing;
+      document.getElementById('custPhone').value = currentProfile.phone;
+      loadMyOrders();
+    }
+  } else {
+    currentProfile = null;
+    isAdmin = false;
+  }
+  renderAccountUI();
+  renderCart();
+}
+
+function renderAccountUI(){
+  const el = document.getElementById('navAccount');
+  if (currentUser && currentProfile){
+    el.innerHTML = `<span class="who">Hi, ${currentProfile.full_name.split(' ')[0]}</span><button onclick="logOut()">Log out</button>`;
+  } else {
+    el.innerHTML = `<button onclick="openAuthModal('login')">Log in</button>`;
+  }
+}
+
+// ---- combo welcome modal ----
+function openComboModal(){
+  if (!currentProfile || currentProfile.first_order_claimed) return;
+  document.getElementById('comboModalBackdrop').classList.add('open');
+}
+async function closeComboModal(){
+  document.getElementById('comboModalBackdrop').classList.remove('open');
+  if (currentUser && currentProfile && !currentProfile.first_order_claimed && db){
+    await db.from('profiles').update({ first_order_claimed: true }).eq('id', currentUser.id);
+    currentProfile.first_order_claimed = true;
+  }
+}
+function addComboFromModal(){
+  cart.push({ variant: 'combo', qty: 1, mode: 'once', date: minDeliveryDate() });
+  renderCart();
+  closeComboModal();
+  document.getElementById('order').scrollIntoView({ behavior: 'smooth' });
+}
+
+// =========================================================================
+// CART
+// =========================================================================
 function selectVariant(v){
   currentVariant = v;
   document.querySelectorAll('[data-variant]').forEach(b => b.classList.toggle('active', b.dataset.variant === v));
@@ -372,8 +650,6 @@ function changeQty(delta){
   currentQty = Math.max(1, Math.min(20, currentQty + delta));
   document.getElementById('qtyDisplay').textContent = currentQty;
 }
-
-const DAY_LABELS = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
 
 function addToCart(){
   let item = { variant: currentVariant, qty: currentQty, mode: currentWhen };
@@ -393,8 +669,8 @@ function addToCart(){
   renderCart();
 }
 
-function removeFromCart(index){
-  cart.splice(index, 1);
+function removeFromCart(i){
+  cart.splice(i, 1);
   renderCart();
 }
 
@@ -403,53 +679,72 @@ function renderCart(){
   const totalRow = document.getElementById('cartTotal');
   const checkoutForm = document.getElementById('checkoutForm');
   const payPanel = document.getElementById('payPanel');
+  const loginGate = document.getElementById('loginGate');
 
-  // any cart change resets an in-progress payment back to the details step
   payPanel.style.display = 'none';
-  checkoutForm.style.display = cart.length ? 'block' : 'none';
 
   if (cart.length === 0){
     list.innerHTML = '<div class="empty-cart">No items yet — add a bottle to get started.</div>';
     totalRow.style.display = 'none';
+    checkoutForm.style.display = 'none';
+    loginGate.style.display = 'none';
     return;
   }
 
   list.innerHTML = cart.map((item, i) => `
     <div class="cart-item">
       <div>
-        <div>${item.qty} × ${item.variant === 'new' ? 'New bottle' : 'Refill'}</div>
+        <div>${item.qty} × ${ITEM_LABEL[item.variant]}</div>
         <div class="meta">${item.mode === 'once' ? `delivery ${item.date}` : `every ${DAY_LABELS[item.day]}`}</div>
       </div>
       <div style="display:flex; align-items:center; gap:12px;">
-        <span class="mono">₹${item.qty * PRICE}</span>
+        <span class="mono">₹${item.qty * PRICE_MAP[item.variant]}</span>
         <button onclick="removeFromCart(${i})">remove</button>
       </div>
     </div>
   `).join('');
 
-  const total = cart.reduce((sum, item) => sum + item.qty * PRICE, 0);
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE_MAP[item.variant], 0);
   totalRow.style.display = 'flex';
   totalRow.querySelector('span:last-child').textContent = `₹${total}`;
   totalRow.querySelector('span:last-child').classList.add('mono');
+
+  if (currentUser){
+    loginGate.style.display = 'none';
+    checkoutForm.style.display = 'block';
+  } else {
+    checkoutForm.style.display = 'none';
+    loginGate.style.display = 'block';
+  }
 }
 
-// ---- checkout: details -> payment (UPI QR) -> WhatsApp confirm ----
+function getRoomString(){
+  const hostel = document.getElementById('custHostel').value.trim();
+  const roomNumber = document.getElementById('custRoomNumber').value.trim();
+  return { hostel, roomNumber, wing: document.getElementById('custAB').value };
+}
+
+// =========================================================================
+// CHECKOUT: details -> payment (UPI QR) -> WhatsApp confirm
+// =========================================================================
 function goToPayment(){
   const name = document.getElementById('custName').value.trim();
-  const room = document.getElementById('custRoom').value.trim();
+  const { hostel, roomNumber, wing } = getRoomString();
   const phone = document.getElementById('custPhone').value.trim();
   const statusEl = document.getElementById('formStatus');
 
-  if (!name || !room || !phone){
-    statusEl.textContent = 'Fill in your name, room, and phone number.';
+  if (!currentUser){
+    statusEl.textContent = 'Log in first.'; statusEl.className = 'form-status err'; return;
+  }
+  if (!name || !hostel || !roomNumber || !phone){
+    statusEl.textContent = 'Fill in your name, hostel, room number, and phone number.';
     statusEl.className = 'form-status err';
     return;
   }
   if (cart.length === 0) return;
-  statusEl.textContent = '';
-  statusEl.className = 'form-status';
+  statusEl.textContent = ''; statusEl.className = 'form-status';
 
-  const total = cart.reduce((sum, item) => sum + item.qty * PRICE, 0);
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE_MAP[item.variant], 0);
   const upiString = `upi://pay?pa=${encodeURIComponent(CONFIG.UPI_ID)}&pn=${encodeURIComponent(CONFIG.UPI_PAYEE_NAME)}&am=${total}&cu=INR&tn=${encodeURIComponent('20L order - ' + name)}`;
   document.getElementById('upiQr').src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiString)}`;
   document.getElementById('payAmount').textContent = `₹${total}`;
@@ -465,25 +760,27 @@ function backToForm(){
 
 async function checkout(){
   const name = document.getElementById('custName').value.trim();
-  const room = document.getElementById('custRoom').value.trim();
+  const { hostel, roomNumber, wing } = getRoomString();
   const phone = document.getElementById('custPhone').value.trim();
   const statusEl = document.getElementById('payStatus');
   const btn = document.querySelector('#payPanel .confirm-btn');
 
-  if (cart.length === 0) return;
+  if (cart.length === 0 || !currentUser) return;
 
   btn.disabled = true;
-  statusEl.textContent = 'Placing order…';
-  statusEl.className = 'form-status';
+  statusEl.textContent = 'Placing order…'; statusEl.className = 'form-status';
 
-  const total = cart.reduce((sum, item) => sum + item.qty * PRICE, 0);
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE_MAP[item.variant], 0);
+  const groupId = (crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random());
 
-  if (isConfigured){
+  if (isConfigured && db){
     try {
       const rows = cart.map(item => ({
+        order_group_id: groupId,
+        customer_id: currentUser.id,
         customer_name: name,
-        room_number: room,
-        phone: phone,
+        hostel, room_number: roomNumber, wing,
+        phone,
         item_type: item.variant,
         quantity: item.qty,
         order_mode: item.mode,
@@ -491,87 +788,89 @@ async function checkout(){
         recurring_day: item.mode === 'recurring' ? item.day : null,
         status: 'pending',
         payment_status: 'claimed',
-        total_amount: item.qty * PRICE
+        total_amount: item.qty * PRICE_MAP[item.variant]
       }));
       const { error } = await db.from('orders').insert(rows);
       if (error) throw error;
     } catch (err){
-      console.error('Supabase insert failed:', err);
+      console.error('Order insert failed:', err);
       statusEl.textContent = 'Could not save order to the database, but you can still send it on WhatsApp.';
       statusEl.className = 'form-status err';
     }
   }
 
-  // Build WhatsApp message
-  const lines = cart.map(item => `• ${item.qty} × ${item.variant === 'new' ? 'New bottle' : 'Refill'} — ${item.mode === 'once' ? `delivery ${item.date}` : `every ${DAY_LABELS[item.day]}`}`);
+  const lines = cart.map(item => `• ${item.qty} × ${ITEM_LABEL[item.variant]} — ${item.mode === 'once' ? `delivery ${item.date}` : `every ${DAY_LABELS[item.day]}`}`);
   const message = [
     `New order — 20L`,
     `Name: ${name}`,
-    `Room: ${room}`,
+    `Room: ${hostel}, Room ${roomNumber}${wing}`,
     `Phone: ${phone}`,
-    ``,
-    ...lines,
-    ``,
+    ``, ...lines, ``,
     `Total: ₹${total} (paid via UPI, screenshot attached)`
   ].join('\n');
 
-  const waUrl = `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
-  window.open(waUrl, '_blank');
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
 
   statusEl.textContent = 'Order sent — attach your payment screenshot on WhatsApp to confirm.';
   statusEl.className = 'form-status ok';
   btn.disabled = false;
   cart = [];
   renderCart();
-  document.getElementById('custName').value = '';
-  document.getElementById('custRoom').value = '';
-  document.getElementById('custPhone').value = '';
+  loadMyOrders();
 }
 
-// ---- my orders lookup ----
-async function lookupOrders(){
-  const phone = document.getElementById('lookupPhone').value.trim();
+// =========================================================================
+// MY ORDERS (customer's own history, via login)
+// =========================================================================
+async function loadMyOrders(){
   const resultEl = document.getElementById('ordersResult');
-  if (!phone){ return; }
+  const ledeEl = document.getElementById('myOrdersLede');
+  if (!currentUser || !db) return;
 
-  if (!isConfigured){
-    resultEl.innerHTML = '<p style="color:#B4482F; font-size:13.5px;">Supabase isn\'t configured yet, so order history isn\'t available in this preview.</p>';
-    return;
+  ledeEl.textContent = 'Your order history.';
+  resultEl.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading…</p>';
+
+  try {
+    const { data, error } = await db.from('orders').select('*').eq('customer_id', currentUser.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    resultEl.innerHTML = renderOrdersTable(data);
+  } catch (err){
+    console.error('Load my orders failed:', err);
+    resultEl.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load your orders.</p>`;
   }
+}
 
-  resultEl.innerHTML = '<p style="font-size:13.5px; color:#8A97A0;">Looking up orders…</p>';
-  const { data, error } = await db
-    .from('orders')
-    .select('*')
-    .eq('phone', phone)
-    .order('created_at', { ascending: false });
-
-  if (error){
-    resultEl.innerHTML = '<p style="color:#B4482F; font-size:13.5px;">Something went wrong looking that up.</p>';
-    return;
-  }
+function renderOrdersTable(data){
   if (!data || data.length === 0){
-    resultEl.innerHTML = '<p style="font-size:13.5px; color:#8A97A0;">No orders found for that number.</p>';
-    return;
+    return '<p style="color:#8A97A0; font-size:13.5px;">No orders yet.</p>';
   }
-
-  resultEl.innerHTML = `
+  return `
     <table class="orders-table">
-      <thead><tr><th>Date placed</th><th>Item</th><th>Qty</th><th>Delivery</th><th>Total</th><th>Status</th></tr></thead>
+      <thead><tr><th>Date placed</th><th>Item</th><th>Qty</th><th>Delivery</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead>
       <tbody>
         ${data.map(o => `
           <tr>
             <td>${new Date(o.created_at).toLocaleDateString()}</td>
-            <td>${o.item_type === 'new' ? 'New bottle' : 'Refill'}</td>
+            <td>${ITEM_LABEL[o.item_type] || o.item_type}</td>
             <td>${o.quantity}</td>
             <td>${o.order_mode === 'recurring' ? `every ${DAY_LABELS[o.recurring_day] || o.recurring_day}` : o.delivery_date}</td>
             <td class="mono">₹${o.total_amount}</td>
             <td><span class="badge ${o.status}">${o.status}</span></td>
+            <td><span class="badge ${o.payment_status}">${o.payment_status}</span></td>
           </tr>
         `).join('')}
       </tbody>
-    </table>
-  `;
+    </table>`;
+}
+
+
+// =========================================================================
+// INIT
+// =========================================================================
+renderCart();
+if (db){
+  refreshSession();
+  db.auth.onAuthStateChange((_event, _session) => { refreshSession(); });
 }
 </script>
 </body>
