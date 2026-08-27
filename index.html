@@ -3,58 +3,139 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
-<title>20L — Admin</title>
+<title>20L — Water, delivered down the hall</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2C16 2 6 15 6 21a10 10 0 0 0 20 0C26 15 16 2 16 2Z' fill='%231C6E8C'/%3E%3Cpath d='M16 6C16 6 9.5 15.8 9.5 21A6.5 6.5 0 0 0 22.5 21C22.5 15.8 16 6 16 6Z' fill='%23F5F2EA' fill-opacity='0.18'/%3E%3Ccircle cx='13' cy='22' r='2' fill='%23F4B942'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../config.js"></script>
+<script src="config.js"></script>
 <style>
   :root{
-    --ink:#142433; --paper:#F5F2EA; --bottle:#1C6E8C; --bottle-deep:#0F4C61;
-    --cap:#F4B942; --cap-deep:#D69A1F; --mist:#E4EEF0; --line:#D8D2C4;
-    --good:#3E8E5A; --bad:#B4482F; --radius:14px;
+    --ink:#142433;
+    --paper:#F5F2EA;
+    --bottle:#1C6E8C;
+    --bottle-deep:#0F4C61;
+    --cap:#F4B942;
+    --cap-deep:#D69A1F;
+    --mist:#E4EEF0;
+    --line:#D8D2C4;
+    --good:#3E8E5A;
+    --bad:#B4482F;
+    --radius:14px;
   }
   *{box-sizing:border-box;}
-  body{ margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation-duration:.001ms !important; transition-duration:.001ms !important;} }
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:'Inter',sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
   h1,h2,h3,.display{ font-family:'Space Grotesk',sans-serif; letter-spacing:-0.01em; margin:0; }
   .mono{ font-family:'IBM Plex Mono',monospace; }
+  a{color:inherit;}
   button{ font-family:inherit; cursor:pointer; }
   :focus-visible{ outline:3px solid var(--bottle); outline-offset:2px; }
+
   .wrap{ max-width:1040px; margin:0 auto; padding:0 24px; }
 
-  header{ border-bottom:1px solid var(--line); padding:16px 0; }
-  .nav{ display:flex; align-items:center; justify-content:space-between; max-width:1040px; margin:0 auto; padding:0 24px; }
-  .brand{ display:flex; align-items:baseline; gap:6px; font-size:20px; font-weight:700; }
+  /* Header */
+  header{ position:sticky; top:0; z-index:50; background:rgba(245,242,234,.9); backdrop-filter:blur(6px); border-bottom:1px solid var(--line); }
+  .nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 24px; max-width:1040px; margin:0 auto; gap:16px; }
+  .brand{ display:flex; align-items:baseline; gap:6px; font-size:22px; font-weight:700; }
   .brand .dot{ color:var(--cap-deep); }
+  .navlinks{ display:flex; align-items:center; gap:22px; font-size:14px; font-weight:500; }
+  .navlinks a{ text-decoration:none; color:var(--ink); opacity:.75; }
+  .navlinks a:hover{ opacity:1; }
   .nav-account{ display:flex; align-items:center; gap:10px; font-size:13px; }
   .nav-account button{ background:none; border:1.5px solid var(--ink); border-radius:999px; padding:7px 14px; font-weight:600; font-size:13px; }
   .nav-account .who{ color:#5A6672; }
 
-  .admin{ padding:40px 0 60px; }
-  .admin h2{ font-size:26px; margin-bottom:6px; }
-  .admin .lede{ color:#5A6672; font-size:14.5px; margin-bottom:24px; }
+  /* Hero */
+  .hero{ padding:72px 0 56px; border-bottom:1px solid var(--line); }
+  .route{ display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--bottle-deep); margin-bottom:22px; }
+  .route span.step{ padding:4px 10px; background:var(--mist); border-radius:999px; }
+  .route .arrow{ opacity:.5; }
+  .hero h1{ font-size:clamp(38px,6vw,64px); font-weight:700; line-height:1.02; max-width:12ch; }
+  .hero h1 em{ font-style:normal; color:var(--bottle); }
+  .hero p.sub{ margin-top:18px; font-size:18px; max-width:46ch; color:#3A4B58; }
+  .hero .cta-row{ margin-top:30px; display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .btn{ display:inline-flex; align-items:center; gap:8px; padding:14px 24px; border-radius:999px; border:none; font-weight:600; font-size:15px; transition:transform .15s ease, box-shadow .15s ease; }
+  .btn-primary{ background:var(--cap); color:var(--ink); box-shadow:0 2px 0 var(--cap-deep); }
+  .btn-primary:hover{ transform:translateY(-1px); }
+  .btn-primary:active{ transform:translateY(1px); box-shadow:0 1px 0 var(--cap-deep); }
+  .btn-ghost{ background:transparent; border:1.5px solid var(--ink); color:var(--ink); }
+  .price-tag{ font-family:'IBM Plex Mono',monospace; font-size:14px; color:#5A6672; }
+
+  /* How it works */
+  .how{ padding:56px 0; border-bottom:1px solid var(--line); }
+  .how h2{ font-size:26px; margin-bottom:28px; }
+  .steps{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+  .step-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:20px; }
+  .step-num{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--cap-deep); font-weight:500; }
+  .step-card h3{ font-size:16px; margin:10px 0 6px; }
+  .step-card p{ font-size:13.5px; color:#5A6672; margin:0; }
+
+  /* Order section */
+  .order{ padding:56px 0; border-bottom:1px solid var(--line); }
+  .order h2{ font-size:26px; margin-bottom:6px; }
+  .order .lede{ color:#5A6672; font-size:14.5px; margin-bottom:30px; }
+  .order-grid{ display:grid; grid-template-columns:1.1fr .9fr; gap:32px; align-items:start; }
+  @media (max-width:820px){ .order-grid{ grid-template-columns:1fr; } .steps{ grid-template-columns:repeat(2,1fr); } }
+
+  .product-card{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:24px; }
+  .variant-toggle{ display:flex; gap:10px; margin:16px 0 20px; }
+  .variant-btn{ flex:1; padding:12px; border-radius:10px; border:1.5px solid var(--line); background:var(--mist); text-align:left; }
+  .variant-btn strong{ display:block; font-size:14px; }
+  .variant-btn span{ font-size:12px; color:#5A6672; font-family:'IBM Plex Mono',monospace; }
+  .variant-btn.active{ border-color:var(--bottle); background:#fff; box-shadow:inset 0 0 0 1px var(--bottle); }
 
   .field{ margin-bottom:16px; }
   .field label{ display:block; font-size:12.5px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#5A6672; margin-bottom:6px; }
   .field input, .field select{ width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line); background:#fff; font-family:'Inter',sans-serif; font-size:15px; }
   .field input:focus, .field select:focus{ border-color:var(--bottle); }
+  .field .hint{ font-size:12px; color:#8A97A0; margin-top:5px; }
 
+  .pay-panel{ margin-top:20px; padding-top:18px; border-top:1px solid var(--line); text-align:center; }
+  .pay-panel img{ width:200px; height:200px; border-radius:10px; border:1px solid var(--line); }
+  .pay-amount{ font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; margin:12px 0 4px; }
+  .pay-hint{ font-size:12.5px; color:#5A6672; margin-bottom:16px; }
+  .back-link{ background:none; border:none; text-decoration:underline; font-size:13px; color:#5A6672; margin-top:10px; }
+
+  /* cap dial stepper */
+  .dial-row{ display:flex; align-items:center; gap:16px; }
+  .dial-btn{ width:44px; height:44px; border-radius:50%; border:2px solid var(--ink); background:repeating-conic-gradient(var(--ink) 0deg 4deg, transparent 4deg 20deg), var(--cap); background-size:cover; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:var(--ink); position:relative; }
+  .dial-btn::after{ content:''; position:absolute; inset:8px; background:var(--cap); border-radius:50%; pointer-events:none; }
+  .dial-btn span{ position:relative; z-index:2; }
+  .dial-qty{ font-family:'IBM Plex Mono',monospace; font-size:22px; min-width:28px; text-align:center; }
+
+  .add-btn{ width:100%; margin-top:20px; padding:14px; border-radius:10px; background:var(--bottle); color:#fff; border:none; font-weight:600; font-size:15px; }
+  .add-btn:hover{ background:var(--bottle-deep); }
+
+  /* Docket / cart */
+  .docket{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:24px; position:relative; }
+  .docket::before{ content:'MANIFEST'; position:absolute; top:-11px; left:20px; background:var(--paper); padding:0 8px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:#8A97A0; }
+  .docket h3{ font-size:15px; margin-bottom:14px; }
+  .empty-cart{ font-size:13.5px; color:#8A97A0; padding:20px 0; text-align:center; border:1px dashed var(--line); border-radius:10px; }
+  .cart-item{ display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+  .cart-item .meta{ color:#8A97A0; font-size:12px; font-family:'IBM Plex Mono',monospace; }
+  .cart-item button{ background:none; border:none; color:var(--bad); font-size:12px; text-decoration:underline; }
+  .cart-total{ display:flex; justify-content:space-between; padding-top:14px; font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:16px; }
+
+  .checkout-form{ margin-top:20px; padding-top:18px; border-top:1px solid var(--line); }
   .confirm-btn{ width:100%; padding:15px; border-radius:10px; background:var(--cap); border:none; font-weight:700; font-size:15px; box-shadow:0 2px 0 var(--cap-deep); }
-  .form-status{ font-size:13px; margin-top:10px; }
+  .confirm-btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .form-status{ font-size:13px; margin-top:10px; text-align:center; }
   .form-status.err{ color:var(--bad); }
   .form-status.ok{ color:var(--good); }
-  .admin-login{ max-width:360px; }
-  .admin-tabs{ display:flex; gap:10px; margin-bottom:22px; }
-  .admin-tab{ padding:10px 18px; border-radius:999px; border:1.5px solid var(--line); background:var(--mist); font-weight:600; font-size:13.5px; }
-  .admin-tab.active{ background:var(--bottle); border-color:var(--bottle); color:#fff; }
-  .danger-btn{ padding:12px 18px; border-radius:10px; border:1.5px solid var(--bad); background:#fff; color:var(--bad); font-weight:600; }
-  .danger-btn:hover{ background:var(--bad); color:#fff; }
-  .detail-actions{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px; }
-  .row-delete{ background:none; border:none; color:var(--bad); font-size:12px; text-decoration:underline; }
+  .login-gate{ text-align:center; padding:20px 0; border-top:1px solid var(--line); margin-top:20px; }
+  .login-gate p{ font-size:13.5px; color:#5A6672; margin:0 0 12px; }
+  .login-gate .row{ display:flex; gap:10px; justify-content:center; }
 
+  /* My orders */
+  .myorders{ padding:56px 0; border-bottom:1px solid var(--line); }
+  .myorders h2{ font-size:26px; margin-bottom:6px; }
+  .myorders .lede{ color:#5A6672; font-size:14.5px; margin-bottom:24px; }
   table.orders-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
   table.orders-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#8A97A0; padding:8px 10px; border-bottom:1px solid var(--line); }
   table.orders-table td{ padding:10px; border-bottom:1px solid var(--line); }
@@ -68,64 +149,276 @@
   .badge.unpaid{ background:#F5DCD4; color:var(--bad); }
   .badge.claimed{ background:#FCEBC7; color:#8A5A00; }
 
-  .order-detail{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:22px; margin-top:18px; }
-  .order-detail h4{ font-size:15px; margin-bottom:12px; }
-  .order-detail .kv{ display:grid; grid-template-columns:120px 1fr; gap:6px 10px; font-size:13.5px; margin-bottom:16px; }
-  .order-detail .kv div:nth-child(odd){ color:#8A97A0; }
-  .update-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px; }
-  .update-row .field{ margin-bottom:0; min-width:150px; }
-  .update-row button{ padding:12px 18px; border-radius:10px; border:none; background:var(--bottle); color:#fff; font-weight:600; }
-  .history-note{ font-size:12px; color:#8A97A0; margin:16px 0 8px; text-transform:uppercase; letter-spacing:.05em; }
-
+  footer{ padding:36px 24px; text-align:center; font-size:13px; color:#8A97A0; }
+  footer a{ text-decoration:underline; opacity:.7; }
   .dev-banner{ background:#FCEBC7; color:#8A5A00; font-size:12.5px; text-align:center; padding:8px 16px; font-family:'IBM Plex Mono',monospace; }
+
+  /* Modal (auth + combo) */
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(20,36,51,.55); display:none; align-items:center; justify-content:center; z-index:200; padding:20px; }
+  .modal-backdrop.open{ display:flex; }
+  .modal{ background:#fff; border-radius:var(--radius); padding:28px; max-width:420px; width:100%; max-height:90vh; overflow-y:auto; position:relative; }
+  .modal h3{ font-size:20px; margin-bottom:4px; }
+  .modal .modal-sub{ font-size:13.5px; color:#5A6672; margin-bottom:18px; }
+  .modal-close{ position:absolute; top:16px; right:16px; background:none; border:none; font-size:20px; color:#8A97A0; }
+  .auth-tabs{ display:flex; gap:8px; margin-bottom:20px; }
+  .auth-tab{ flex:1; padding:10px; border-radius:10px; border:1.5px solid var(--line); background:var(--mist); font-weight:600; font-size:13.5px; }
+  .auth-tab.active{ background:var(--bottle); border-color:var(--bottle); color:#fff; }
+  .combo-price{ font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:700; color:var(--bottle-deep); text-align:center; margin:14px 0; }
+  .combo-note{ font-size:13px; color:#5A6672; text-align:center; margin-bottom:20px; }
+
 </style>
 </head>
 <body>
 
 <div id="devBanner" class="dev-banner" style="display:none;">
-  ⚠ Supabase isn't configured — edit config.js with your project URL and anon key.
+  ⚠ Supabase isn't configured yet — edit the CONFIG object at the bottom of the file with your project URL and anon key.
 </div>
 
 <header>
   <div class="nav">
-    <div class="brand">20L<span class="dot">.</span> Admin</div>
-    <div class="nav-account" id="navAccount"></div>
+    <div class="brand">20L<span class="dot">.</span></div>
+    <div class="navlinks">
+      <a href="#order">Order</a>
+      <a href="#myorders">My orders</a>
+    </div>
+    <div class="nav-account" id="navAccount">
+      <button onclick="openAuthModal('login')">Log in</button>
+    </div>
   </div>
 </header>
 
-<section class="admin">
+<section class="hero">
   <div class="wrap">
-    <h2>Order management</h2>
-    <p class="lede" id="adminLede">Log in with an admin account to manage orders.</p>
-
-    <div class="admin-login" id="adminLoginBox">
-      <div class="field"><label for="adminEmail">Email</label><input type="email" id="adminEmail" placeholder="you@example.com"></div>
-      <div class="field"><label for="adminPassword">Password</label><input type="password" id="adminPassword" placeholder="••••••••"></div>
-      <button class="confirm-btn" onclick="adminLogin()">Log in</button>
-      <div class="form-status" id="adminLoginStatus"></div>
+    <div class="route">
+      <span class="step">Warehouse</span><span class="arrow">→</span>
+      <span class="step">Your Room</span><span class="arrow">→</span>
+      <span class="step">Refilled</span>
     </div>
-
-    <div id="adminPanel" style="display:none;">
-      <div class="admin-tabs">
-        <button class="admin-tab active" id="tabOrders" onclick="switchAdminTab('orders')">Orders</button>
-        <button class="admin-tab" id="tabCustomers" onclick="switchAdminTab('customers')">Customers</button>
-      </div>
-
-      <div id="ordersTabPane">
-        <div id="adminTableWrap"></div>
-        <div id="orderDetail"></div>
-      </div>
-
-      <div id="customersTabPane" style="display:none;">
-        <div id="customersTableWrap"></div>
-        <div id="customerDetail"></div>
-      </div>
+    <h1>Water, delivered<br><em>down the hall.</em></h1>
+    <p class="sub">20L Bisleri bottles, brought straight to your hostel room. Buy once, refill forever — no more warehouse runs.</p>
+    <div class="cta-row">
+      <a href="#order" class="btn btn-primary">Order water →</a>
+      <span class="price-tag">₹160 new bottle · ₹160 refill · ₹320 combo</span>
     </div>
   </div>
 </section>
 
+<section class="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step-card"><div class="step-num">01</div><h3>Make an account</h3><p>Sign up once with your name, room, and phone — no re-typing it every order.</p></div>
+      <div class="step-card"><div class="step-num">02</div><h3>Add bottles</h3><p>New bottle, refill, or the combo — pick a one-time date or a weekly recurring day.</p></div>
+      <div class="step-card"><div class="step-num">03</div><h3>Pay by UPI</h3><p>Scan the QR for the order total, right in your UPI app.</p></div>
+      <div class="step-card"><div class="step-num">04</div><h3>Confirm on WhatsApp</h3><p>Send your payment screenshot and we'll get it moving.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="order" id="order">
+  <div class="wrap">
+    <h2>Place an order</h2>
+    <p class="lede">Add bottles to your manifest, then check out.</p>
+    <div class="order-grid">
+
+      <div class="product-card">
+        <h3 style="font-size:18px;">20L Bisleri Bottle</h3>
+        <div class="variant-toggle">
+          <button class="variant-btn active" data-variant="new" onclick="selectVariant('new')">
+            <strong>New bottle</strong><span>₹160</span>
+          </button>
+          <button class="variant-btn" data-variant="refill" onclick="selectVariant('refill')">
+            <strong>Refill</strong><span>₹160</span>
+          </button>
+          <button class="variant-btn" data-variant="combo" onclick="selectVariant('combo')">
+            <strong>Combo</strong><span>₹320</span>
+          </button>
+        </div>
+
+        <div class="field">
+          <label>Quantity</label>
+          <div class="dial-row">
+            <button class="dial-btn" onclick="changeQty(-1)" aria-label="Decrease quantity"><span>−</span></button>
+            <div class="dial-qty" id="qtyDisplay">1</div>
+            <button class="dial-btn" onclick="changeQty(1)" aria-label="Increase quantity"><span>+</span></button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>When</label>
+          <div class="variant-toggle">
+            <button class="variant-btn active" data-when="once" onclick="selectWhen('once')">
+              <strong>One-time</strong><span>pick a date</span>
+            </button>
+            <button class="variant-btn" data-when="recurring" onclick="selectWhen('recurring')">
+              <strong>Recurring</strong><span>every week</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field" id="onceField">
+          <label for="deliveryDate">Delivery date</label>
+          <input type="date" id="deliveryDate">
+          <div class="hint">Must be at least 2 days from today.</div>
+        </div>
+
+        <div class="field" id="recurringField" style="display:none;">
+          <label for="recurringDay">Delivery day, every week</label>
+          <select id="recurringDay">
+            <option value="mon">Monday</option>
+            <option value="tue">Tuesday</option>
+            <option value="wed">Wednesday</option>
+            <option value="thu">Thursday</option>
+            <option value="fri">Friday</option>
+            <option value="sat">Saturday</option>
+            <option value="sun">Sunday</option>
+          </select>
+          <div class="hint">We'll deliver on this day every week until you cancel.</div>
+        </div>
+
+        <button class="add-btn" onclick="addToCart()">Add to manifest</button>
+      </div>
+
+      <div class="docket">
+        <h3>Your order</h3>
+        <div id="cartList"><div class="empty-cart">No items yet — add a bottle to get started.</div></div>
+        <div class="cart-total" id="cartTotal" style="display:none;">
+          <span>Total</span><span class="mono">₹0</span>
+        </div>
+
+        <div class="login-gate" id="loginGate" style="display:none;">
+          <p>Log in or make an account to check out.</p>
+          <div class="row">
+            <button class="btn btn-ghost" onclick="openAuthModal('login')">Log in</button>
+            <button class="btn btn-primary" onclick="openAuthModal('signup')">Sign up</button>
+          </div>
+        </div>
+
+        <div class="checkout-form" id="checkoutForm" style="display:none;">
+          <div class="field"><label for="custName">Name</label><input type="text" id="custName" placeholder="Your name"></div>
+          <div class="field">
+            <label for="custHostel">Hostel</label>
+            <input type="text" id="custHostel" list="hostelOptions" placeholder="Type to search…" autocomplete="off">
+            <datalist id="hostelOptions">
+              <option value="Sunderbans 1A"></option>
+              <option value="Chilika 1B"></option>
+              <option value="Kaziranga 2BX"></option>
+              <option value="Kaziranga 2B"></option>
+              <option value="Hemis 2A"></option>
+              <option value="Periyar 2C"></option>
+              <option value="Gir 3A"></option>
+              <option value="Dibang 3B"></option>
+              <option value="Kanha 3C"></option>
+              <option value="Manas 4A"></option>
+              <option value="Marine 4B"></option>
+              <option value="Mudumalai 4C"></option>
+              <option value="Betla 5A"></option>
+              <option value="Bandhavgarh 5C"></option>
+              <option value="Bandipur 5B"></option>
+              <option value="Sariska 6A"></option>
+              <option value="Sariska 6B"></option>
+              <option value="Eagle Nest"></option>
+              <option value="Tower 6"></option>
+              <option value="Tower 9"></option>
+            </datalist>
+          </div>
+          <div class="field"><label for="custRoomNumber">Room number</label><input type="text" id="custRoomNumber" placeholder="e.g. 214"></div>
+          <div class="field">
+            <label for="custAB">Wing</label>
+            <select id="custAB">
+              <option value="A">A</option>
+              <option value="B">B</option>
+            </select>
+          </div>
+          <div class="field"><label for="custPhone">Phone number</label><input type="tel" id="custPhone" placeholder="10-digit number"></div>
+          <button class="confirm-btn" id="toPaymentBtn" onclick="goToPayment()">Continue to payment</button>
+          <div class="form-status" id="formStatus"></div>
+        </div>
+
+        <div class="pay-panel" id="payPanel" style="display:none;">
+          <div style="font-size:13px; color:#5A6672; margin-bottom:10px;">Scan with any UPI app</div>
+          <img id="upiQr" src="" alt="UPI payment QR code">
+          <div class="pay-amount mono" id="payAmount"></div>
+          <div class="pay-hint">Pay this amount, then tap below — we'll confirm your order on WhatsApp.</div>
+          <button class="confirm-btn" onclick="checkout()">I've paid — send on WhatsApp</button>
+          <button class="back-link" onclick="backToForm()">← back to details</button>
+          <div class="form-status" id="payStatus"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="myorders" id="myorders">
+  <div class="wrap">
+    <h2>My orders</h2>
+    <p class="lede" id="myOrdersLede">Log in to see your order history.</p>
+    <div id="ordersResult"></div>
+  </div>
+</section>
+
+<footer>
+  Run by three people, one hostel room, and a lot of 20L bottles.
+</footer>
+
+<!-- Auth modal (login / sign up) -->
+<div class="modal-backdrop" id="authModalBackdrop">
+  <div class="modal">
+    <button class="modal-close" onclick="closeAuthModal()">×</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Log in</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Sign up</button>
+    </div>
+
+    <div id="loginPane">
+      <h3>Welcome back</h3>
+      <div class="modal-sub">Log in to order and see your history.</div>
+      <div class="field"><label for="loginEmail">Email</label><input type="email" id="loginEmail"></div>
+      <div class="field"><label for="loginPassword">Password</label><input type="password" id="loginPassword"></div>
+      <button class="confirm-btn" onclick="logIn()">Log in</button>
+      <div class="form-status" id="loginStatus"></div>
+    </div>
+
+    <div id="signupPane" style="display:none;">
+      <h3>Create your account</h3>
+      <div class="modal-sub">One-time setup — we'll remember it for every order.</div>
+      <div class="field"><label for="suName">Name</label><input type="text" id="suName"></div>
+      <div class="field"><label for="suEmail">Email</label><input type="email" id="suEmail"></div>
+      <div class="field"><label for="suPassword">Password</label><input type="password" id="suPassword" placeholder="At least 6 characters"></div>
+      <div class="field">
+        <label for="suHostel">Hostel</label>
+        <input type="text" id="suHostel" list="hostelOptions" placeholder="Type to search…" autocomplete="off">
+      </div>
+      <div class="field"><label for="suRoomNumber">Room number</label><input type="text" id="suRoomNumber" placeholder="e.g. 214"></div>
+      <div class="field">
+        <label for="suAB">Wing</label>
+        <select id="suAB"><option value="A">A</option><option value="B">B</option></select>
+      </div>
+      <div class="field"><label for="suPhone">Phone number</label><input type="tel" id="suPhone"></div>
+      <button class="confirm-btn" onclick="signUp()">Create account</button>
+      <div class="form-status" id="signupStatus"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Combo welcome modal (first-time signups) -->
+<div class="modal-backdrop" id="comboModalBackdrop">
+  <div class="modal">
+    <button class="modal-close" onclick="closeComboModal()">×</button>
+    <h3>Welcome to 20L 🎉</h3>
+    <div class="modal-sub">Since you're just getting set up, most people start with both a new bottle and a refill.</div>
+    <div class="combo-price">₹320</div>
+    <div class="combo-note">1 new bottle + 1 refill, bundled — that's the combo.</div>
+    <button class="confirm-btn" onclick="addComboFromModal()">Add combo to my order</button>
+    <button class="back-link" onclick="closeComboModal()" style="display:block; margin:10px auto 0;">No thanks, I'll pick myself</button>
+  </div>
+</div>
+
 <script>
-// ---- global error catcher ----
+// ====================== live state ======================
+
+// ---- global error catcher: if ANYTHING throws, show it on-screen instead of failing silently ----
 window.addEventListener('error', function(e){
   let box = document.getElementById('jsErrorBox');
   if (!box){
@@ -137,14 +430,34 @@ window.addEventListener('error', function(e){
   box.textContent = 'JS error: ' + e.message + ' (' + (e.filename || '').split('/').pop() + ':' + e.lineno + ')';
 });
 
+// ---- state ----
 let db = null;
-let currentUser = null;
-let isAdmin = false;
+let isConfigured = false;
+let currentVariant = 'new';
+let currentWhen = 'once';
+let currentQty = 1;
+let cart = [];
+const PRICE_MAP = { new: 160, refill: 160, combo: 320 };
 const ITEM_LABEL = { new: 'New bottle', refill: 'Refill', combo: 'Combo (bottle + refill)' };
 const DAY_LABELS = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
 
+let currentUser = null;      // supabase auth user object, or null
+let currentProfile = null;   // row from `profiles`, or null
+let isAdmin = false;
+
+// ---- date min setup ----
+const dateInput = document.getElementById('deliveryDate');
+function minDeliveryDate(){
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  return d.toISOString().split('T')[0];
+}
+dateInput.min = minDeliveryDate();
+dateInput.value = minDeliveryDate();
+
+// ---- Supabase init (wrapped so a blocked/failed CDN load can't break buttons) ----
 try {
-  const isConfigured = CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.startsWith("YOUR_");
+  isConfigured = CONFIG.SUPABASE_URL.startsWith("http") && !CONFIG.SUPABASE_ANON_KEY.startsWith("YOUR_");
   if (isConfigured) {
     if (typeof window.supabase === 'undefined') throw new Error('Supabase library did not load');
     db = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
@@ -154,89 +467,376 @@ try {
 } catch (err) {
   console.error('Supabase init failed:', err);
   db = null;
+  isConfigured = false;
   const banner = document.getElementById('devBanner');
-  banner.textContent = '⚠ Could not connect to the database (offline, or the CDN script was blocked).';
+  banner.textContent = '⚠ Could not connect to the database (offline, or the CDN script was blocked). Browsing still works, but login and ordering need a connection.';
   banner.style.display = 'block';
 }
 
-async function refreshSession(){
-  if (!db) return;
-  const { data: { session } } = await db.auth.getSession();
-  currentUser = session ? session.user : null;
-  if (currentUser){
-    const { data: adminRow } = await db.from('admins').select('id').eq('id', currentUser.id).maybeSingle();
-    isAdmin = !!adminRow;
-  } else {
-    isAdmin = false;
-  }
-  renderAccountUI();
-  renderAdminGate();
+// =========================================================================
+// AUTH
+// =========================================================================
+function openAuthModal(tab){
+  document.getElementById('authModalBackdrop').classList.add('open');
+  switchAuthTab(tab || 'login');
+}
+function closeAuthModal(){
+  document.getElementById('authModalBackdrop').classList.remove('open');
+}
+function switchAuthTab(tab){
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+  document.getElementById('loginPane').style.display = (tab === 'login') ? 'block' : 'none';
+  document.getElementById('signupPane').style.display = (tab === 'signup') ? 'block' : 'none';
 }
 
-function renderAccountUI(){
-  const el = document.getElementById('navAccount');
-  if (currentUser){
-    el.innerHTML = `<span class="who">${currentUser.email}</span><button onclick="logOut()">Log out</button>`;
-  } else {
-    el.innerHTML = '';
+async function signUp(){
+  const statusEl = document.getElementById('signupStatus');
+  const name = document.getElementById('suName').value.trim();
+  const email = document.getElementById('suEmail').value.trim();
+  const password = document.getElementById('suPassword').value;
+  const hostel = document.getElementById('suHostel').value.trim();
+  const roomNumber = document.getElementById('suRoomNumber').value.trim();
+  const wing = document.getElementById('suAB').value;
+  const phone = document.getElementById('suPhone').value.trim();
+
+  if (!name || !email || !password || !hostel || !roomNumber || !phone){
+    statusEl.textContent = 'Fill in every field.'; statusEl.className = 'form-status err'; return;
+  }
+  if (password.length < 6){
+    statusEl.textContent = 'Password needs at least 6 characters.'; statusEl.className = 'form-status err'; return;
+  }
+  if (!isConfigured || !db){
+    statusEl.textContent = 'Not connected to the database right now.'; statusEl.className = 'form-status err'; return;
+  }
+  statusEl.textContent = 'Creating your account…'; statusEl.className = 'form-status';
+
+  try {
+    const { data, error } = await db.auth.signUp({ email, password });
+    if (error) throw error;
+
+    if (!data.session){
+      // Email confirmation is ON in this Supabase project — see SETUP.md to turn it off.
+      statusEl.textContent = 'Check your email to confirm your account, then log in.';
+      statusEl.className = 'form-status ok';
+      return;
+    }
+
+    const { error: profileErr } = await db.from('profiles').insert({
+      id: data.user.id,
+      full_name: name,
+      phone,
+      hostel,
+      room_number: roomNumber,
+      wing,
+      first_order_claimed: false
+    });
+    if (profileErr) throw profileErr;
+
+    await refreshSession();
+    closeAuthModal();
+    openComboModal();
+  } catch (err){
+    console.error('Sign up failed:', err);
+    statusEl.textContent = err.message || 'Could not create account.';
+    statusEl.className = 'form-status err';
+  }
+}
+
+async function logIn(){
+  const statusEl = document.getElementById('loginStatus');
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password){
+    statusEl.textContent = 'Enter your email and password.'; statusEl.className = 'form-status err'; return;
+  }
+  if (!isConfigured || !db){
+    statusEl.textContent = 'Not connected to the database right now.'; statusEl.className = 'form-status err'; return;
+  }
+  statusEl.textContent = 'Logging in…'; statusEl.className = 'form-status';
+  try {
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    await refreshSession();
+    closeAuthModal();
+  } catch (err){
+    console.error('Login failed:', err);
+    statusEl.textContent = err.message || 'Could not log in.';
+    statusEl.className = 'form-status err';
   }
 }
 
 async function logOut(){
   if (db) await db.auth.signOut();
   currentUser = null;
+  currentProfile = null;
   isAdmin = false;
   renderAccountUI();
-  renderAdminGate();
+  renderCart();
+  document.getElementById('ordersResult').innerHTML = '';
+  document.getElementById('myOrdersLede').textContent = 'Log in to see your order history.';
 }
 
-function switchAdminTab(tab){
-  document.getElementById('tabOrders').classList.toggle('active', tab === 'orders');
-  document.getElementById('tabCustomers').classList.toggle('active', tab === 'customers');
-  document.getElementById('ordersTabPane').style.display = (tab === 'orders') ? 'block' : 'none';
-  document.getElementById('customersTabPane').style.display = (tab === 'customers') ? 'block' : 'none';
-  if (tab === 'customers') loadAllCustomers();
-}
+async function refreshSession(){
+  if (!db) return;
+  const { data: { session } } = await db.auth.getSession();
+  currentUser = session ? session.user : null;
 
-function renderAdminGate(){
-  const loginBox = document.getElementById('adminLoginBox');
-  const panel = document.getElementById('adminPanel');
-  const lede = document.getElementById('adminLede');
+  if (currentUser){
+    const { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+    currentProfile = profile || null;
 
-  if (currentUser && isAdmin){
-    loginBox.style.display = 'none';
-    panel.style.display = 'block';
-    lede.textContent = 'All orders, latest first. Click a row for full details.';
-    loadAllOrders();
-  } else if (currentUser && !isAdmin){
-    loginBox.style.display = 'block';
-    panel.style.display = 'none';
-    lede.textContent = "This account isn't an admin. Log in with an admin account below.";
+    const { data: adminRow } = await db.from('admins').select('id').eq('id', currentUser.id).maybeSingle();
+    isAdmin = !!adminRow;
+
+    if (currentProfile){
+      document.getElementById('custName').value = currentProfile.full_name;
+      document.getElementById('custHostel').value = currentProfile.hostel;
+      document.getElementById('custRoomNumber').value = currentProfile.room_number;
+      document.getElementById('custAB').value = currentProfile.wing;
+      document.getElementById('custPhone').value = currentProfile.phone;
+      loadMyOrders();
+    }
   } else {
-    loginBox.style.display = 'block';
-    panel.style.display = 'none';
-    lede.textContent = 'Log in with an admin account to manage orders.';
+    currentProfile = null;
+    isAdmin = false;
+  }
+  renderAccountUI();
+  renderCart();
+}
+
+function renderAccountUI(){
+  const el = document.getElementById('navAccount');
+  if (currentUser && currentProfile){
+    el.innerHTML = `<span class="who">Hi, ${currentProfile.full_name.split(' ')[0]}</span><button onclick="logOut()">Log out</button>`;
+  } else {
+    el.innerHTML = `<button onclick="openAuthModal('login')">Log in</button>`;
   }
 }
 
-async function adminLogin(){
-  const statusEl = document.getElementById('adminLoginStatus');
-  const email = document.getElementById('adminEmail').value.trim();
-  const password = document.getElementById('adminPassword').value;
-  if (!email || !password){
-    statusEl.textContent = 'Enter email and password.'; statusEl.className = 'form-status err'; return;
+// ---- combo welcome modal ----
+function openComboModal(){
+  if (!currentProfile || currentProfile.first_order_claimed) return;
+  document.getElementById('comboModalBackdrop').classList.add('open');
+}
+async function closeComboModal(){
+  document.getElementById('comboModalBackdrop').classList.remove('open');
+  if (currentUser && currentProfile && !currentProfile.first_order_claimed && db){
+    await db.from('profiles').update({ first_order_claimed: true }).eq('id', currentUser.id);
+    currentProfile.first_order_claimed = true;
   }
-  if (!db){ statusEl.textContent = 'Not connected.'; statusEl.className = 'form-status err'; return; }
-  statusEl.textContent = 'Logging in…'; statusEl.className = 'form-status';
-  try {
-    const { error } = await db.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    await refreshSession();
-    if (!isAdmin) statusEl.textContent = "Logged in, but this account isn't an admin.";
-    else statusEl.textContent = '';
-  } catch (err){
-    statusEl.textContent = err.message || 'Could not log in.';
+}
+function addComboFromModal(){
+  cart.push({ variant: 'combo', qty: 1, mode: 'once', date: minDeliveryDate() });
+  renderCart();
+  closeComboModal();
+  document.getElementById('order').scrollIntoView({ behavior: 'smooth' });
+}
+
+// =========================================================================
+// CART
+// =========================================================================
+function selectVariant(v){
+  currentVariant = v;
+  document.querySelectorAll('[data-variant]').forEach(b => b.classList.toggle('active', b.dataset.variant === v));
+}
+function selectWhen(w){
+  currentWhen = w;
+  document.querySelectorAll('[data-when]').forEach(b => b.classList.toggle('active', b.dataset.when === w));
+  document.getElementById('onceField').style.display = (w === 'once') ? 'block' : 'none';
+  document.getElementById('recurringField').style.display = (w === 'recurring') ? 'block' : 'none';
+}
+function changeQty(delta){
+  currentQty = Math.max(1, Math.min(20, currentQty + delta));
+  document.getElementById('qtyDisplay').textContent = currentQty;
+}
+
+function addToCart(){
+  let item = { variant: currentVariant, qty: currentQty, mode: currentWhen };
+  if (currentWhen === 'once'){
+    const date = dateInput.value;
+    if (!date || date < minDeliveryDate()){
+      alert('Pick a delivery date at least 2 days from today.');
+      return;
+    }
+    item.date = date;
+  } else {
+    item.day = document.getElementById('recurringDay').value;
+  }
+  cart.push(item);
+  currentQty = 1;
+  document.getElementById('qtyDisplay').textContent = 1;
+  renderCart();
+}
+
+function removeFromCart(i){
+  cart.splice(i, 1);
+  renderCart();
+}
+
+function renderCart(){
+  const list = document.getElementById('cartList');
+  const totalRow = document.getElementById('cartTotal');
+  const checkoutForm = document.getElementById('checkoutForm');
+  const payPanel = document.getElementById('payPanel');
+  const loginGate = document.getElementById('loginGate');
+
+  payPanel.style.display = 'none';
+
+  if (cart.length === 0){
+    list.innerHTML = '<div class="empty-cart">No items yet — add a bottle to get started.</div>';
+    totalRow.style.display = 'none';
+    checkoutForm.style.display = 'none';
+    loginGate.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = cart.map((item, i) => `
+    <div class="cart-item">
+      <div>
+        <div>${item.qty} × ${ITEM_LABEL[item.variant]}</div>
+        <div class="meta">${item.mode === 'once' ? `delivery ${item.date}` : `every ${DAY_LABELS[item.day]}`}</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="mono">₹${item.qty * PRICE_MAP[item.variant]}</span>
+        <button onclick="removeFromCart(${i})">remove</button>
+      </div>
+    </div>
+  `).join('');
+
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE_MAP[item.variant], 0);
+  totalRow.style.display = 'flex';
+  totalRow.querySelector('span:last-child').textContent = `₹${total}`;
+  totalRow.querySelector('span:last-child').classList.add('mono');
+
+  if (currentUser){
+    loginGate.style.display = 'none';
+    checkoutForm.style.display = 'block';
+  } else {
+    checkoutForm.style.display = 'none';
+    loginGate.style.display = 'block';
+  }
+}
+
+function getRoomString(){
+  const hostel = document.getElementById('custHostel').value.trim();
+  const roomNumber = document.getElementById('custRoomNumber').value.trim();
+  return { hostel, roomNumber, wing: document.getElementById('custAB').value };
+}
+
+// =========================================================================
+// CHECKOUT: details -> payment (UPI QR) -> WhatsApp confirm
+// =========================================================================
+function goToPayment(){
+  const name = document.getElementById('custName').value.trim();
+  const { hostel, roomNumber, wing } = getRoomString();
+  const phone = document.getElementById('custPhone').value.trim();
+  const statusEl = document.getElementById('formStatus');
+
+  if (!currentUser){
+    statusEl.textContent = 'Log in first.'; statusEl.className = 'form-status err'; return;
+  }
+  if (!name || !hostel || !roomNumber || !phone){
+    statusEl.textContent = 'Fill in your name, hostel, room number, and phone number.';
     statusEl.className = 'form-status err';
+    return;
+  }
+  if (cart.length === 0) return;
+  statusEl.textContent = ''; statusEl.className = 'form-status';
+
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE_MAP[item.variant], 0);
+  const upiString = `upi://pay?pa=${encodeURIComponent(CONFIG.UPI_ID)}&pn=${encodeURIComponent(CONFIG.UPI_PAYEE_NAME)}&am=${total}&cu=INR&tn=${encodeURIComponent('20L order - ' + name)}`;
+  document.getElementById('upiQr').src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiString)}`;
+  document.getElementById('payAmount').textContent = `₹${total}`;
+
+  document.getElementById('checkoutForm').style.display = 'none';
+  document.getElementById('payPanel').style.display = 'block';
+}
+
+function backToForm(){
+  document.getElementById('payPanel').style.display = 'none';
+  document.getElementById('checkoutForm').style.display = 'block';
+}
+
+async function checkout(){
+  const name = document.getElementById('custName').value.trim();
+  const { hostel, roomNumber, wing } = getRoomString();
+  const phone = document.getElementById('custPhone').value.trim();
+  const statusEl = document.getElementById('payStatus');
+  const btn = document.querySelector('#payPanel .confirm-btn');
+
+  if (cart.length === 0 || !currentUser) return;
+
+  btn.disabled = true;
+  statusEl.textContent = 'Placing order…'; statusEl.className = 'form-status';
+
+  const total = cart.reduce((sum, item) => sum + item.qty * PRICE_MAP[item.variant], 0);
+  const groupId = (crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random());
+
+  if (isConfigured && db){
+    try {
+      const rows = cart.map(item => ({
+        order_group_id: groupId,
+        customer_id: currentUser.id,
+        customer_name: name,
+        hostel, room_number: roomNumber, wing,
+        phone,
+        item_type: item.variant,
+        quantity: item.qty,
+        order_mode: item.mode,
+        delivery_date: item.mode === 'once' ? item.date : null,
+        recurring_day: item.mode === 'recurring' ? item.day : null,
+        status: 'pending',
+        payment_status: 'claimed',
+        total_amount: item.qty * PRICE_MAP[item.variant]
+      }));
+      const { error } = await db.from('orders').insert(rows);
+      if (error) throw error;
+    } catch (err){
+      console.error('Order insert failed:', err);
+      statusEl.textContent = 'Could not save order to the database, but you can still send it on WhatsApp.';
+      statusEl.className = 'form-status err';
+    }
+  }
+
+  const lines = cart.map(item => `• ${item.qty} × ${ITEM_LABEL[item.variant]} — ${item.mode === 'once' ? `delivery ${item.date}` : `every ${DAY_LABELS[item.day]}`}`);
+  const message = [
+    `New order — 20L`,
+    `Name: ${name}`,
+    `Room: ${hostel}, Room ${roomNumber}${wing}`,
+    `Phone: ${phone}`,
+    ``, ...lines, ``,
+    `Total: ₹${total} (paid via UPI, screenshot attached)`
+  ].join('\n');
+
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
+
+  statusEl.textContent = 'Order sent — attach your payment screenshot on WhatsApp to confirm.';
+  statusEl.className = 'form-status ok';
+  btn.disabled = false;
+  cart = [];
+  renderCart();
+  loadMyOrders();
+}
+
+// =========================================================================
+// MY ORDERS (customer's own history, via login)
+// =========================================================================
+async function loadMyOrders(){
+  const resultEl = document.getElementById('ordersResult');
+  const ledeEl = document.getElementById('myOrdersLede');
+  if (!currentUser || !db) return;
+
+  ledeEl.textContent = 'Your order history.';
+  resultEl.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading…</p>';
+
+  try {
+    const { data, error } = await db.from('orders').select('*').eq('customer_id', currentUser.id).order('created_at', { ascending: false });
+    if (error) throw error;
+    resultEl.innerHTML = renderOrdersTable(data);
+  } catch (err){
+    console.error('Load my orders failed:', err);
+    resultEl.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load your orders.</p>`;
   }
 }
 
@@ -263,287 +863,14 @@ function renderOrdersTable(data){
     </table>`;
 }
 
-let allOrdersCache = [];
-
-async function loadAllOrders(){
-  const wrap = document.getElementById('adminTableWrap');
-  wrap.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading…</p>';
-  try {
-    const { data, error } = await db.from('orders').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    allOrdersCache = data || [];
-    wrap.innerHTML = `
-      <table class="orders-table">
-        <thead><tr><th>Date</th><th>Customer</th><th>Room</th><th>Item</th><th>Qty</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead>
-        <tbody>
-          ${allOrdersCache.map(o => `
-            <tr class="clickable" onclick="openOrderDetail('${o.id}')">
-              <td>${new Date(o.created_at).toLocaleDateString()}</td>
-              <td>${o.customer_name}</td>
-              <td>${o.hostel}, ${o.room_number}${o.wing}</td>
-              <td>${ITEM_LABEL[o.item_type] || o.item_type}</td>
-              <td>${o.quantity}</td>
-              <td class="mono">₹${o.total_amount}</td>
-              <td><span class="badge ${o.status}">${o.status}</span></td>
-              <td><span class="badge ${o.payment_status}">${o.payment_status}</span></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
-  } catch (err){
-    console.error('Load all orders failed:', err);
-    wrap.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load orders.</p>`;
-  }
-}
-
-function renderGroupItemsWithDelete(items){
-  if (!items || items.length === 0) return '<p style="color:#8A97A0; font-size:13.5px;">No items.</p>';
-  return `
-    <table class="orders-table">
-      <thead><tr><th>Item</th><th>Qty</th><th>Delivery</th><th>Total</th><th>Status</th><th>Payment</th><th></th></tr></thead>
-      <tbody>
-        ${items.map(o => `
-          <tr>
-            <td>${ITEM_LABEL[o.item_type] || o.item_type}</td>
-            <td>${o.quantity}</td>
-            <td>${o.order_mode === 'recurring' ? `every ${DAY_LABELS[o.recurring_day] || o.recurring_day}` : o.delivery_date}</td>
-            <td class="mono">₹${o.total_amount}</td>
-            <td><span class="badge ${o.status}">${o.status}</span></td>
-            <td><span class="badge ${o.payment_status}">${o.payment_status}</span></td>
-            <td><button class="row-delete" onclick="deleteOrderLine('${o.id}', '${o.order_group_id}')">delete</button></td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>`;
-}
-
-async function openOrderDetail(orderId){
-  const detailEl = document.getElementById('orderDetail');
-  const order = allOrdersCache.find(o => o.id === orderId);
-  if (!order) return;
-
-  detailEl.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading details…</p>';
-
-  try {
-    const [{ data: groupItems, error: groupErr }, { data: history, error: histErr }] = await Promise.all([
-      db.from('orders').select('*').eq('order_group_id', order.order_group_id),
-      db.from('orders').select('*').eq('customer_id', order.customer_id).order('created_at', { ascending: false })
-    ]);
-    if (groupErr) throw groupErr;
-    if (histErr) throw histErr;
-
-    detailEl.innerHTML = `
-      <div class="order-detail">
-        <div class="detail-actions">
-          <h4>Order — ${order.customer_name}</h4>
-          <button class="danger-btn" onclick="deleteWholeOrder('${order.order_group_id}')">Delete entire order</button>
-        </div>
-        <div class="kv">
-          <div>Room</div><div>${order.hostel}, Room ${order.room_number}${order.wing}</div>
-          <div>Phone</div><div>${order.phone}</div>
-          <div>Placed</div><div>${new Date(order.created_at).toLocaleString()}</div>
-        </div>
-
-        <div class="history-note">Items in this order</div>
-        ${renderGroupItemsWithDelete(groupItems)}
-
-        <div class="history-note">Edit selected line item (${ITEM_LABEL[order.item_type] || order.item_type})</div>
-        <div class="update-row">
-          <div class="field">
-            <label>Quantity</label>
-            <input type="number" min="1" id="qtySelect-${order.id}" value="${order.quantity}">
-          </div>
-          ${order.order_mode === 'once' ? `
-          <div class="field">
-            <label>Delivery date</label>
-            <input type="date" id="dateSelect-${order.id}" value="${order.delivery_date || ''}">
-          </div>` : `
-          <div class="field">
-            <label>Recurring day</label>
-            <select id="daySelect-${order.id}">
-              ${['mon','tue','wed','thu','fri','sat','sun'].map(d => `<option value="${d}" ${d===order.recurring_day?'selected':''}>${DAY_LABELS[d]}</option>`).join('')}
-            </select>
-          </div>`}
-          <div class="field">
-            <label>Status</label>
-            <select id="statusSelect-${order.id}">
-              ${['pending','confirmed','delivered','cancelled'].map(s => `<option value="${s}" ${s===order.status?'selected':''}>${s}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field">
-            <label>Payment</label>
-            <select id="paymentSelect-${order.id}">
-              ${['unpaid','claimed','confirmed'].map(s => `<option value="${s}" ${s===order.payment_status?'selected':''}>${s}</option>`).join('')}
-            </select>
-          </div>
-          <button onclick="saveOrderUpdate('${order.id}', '${order.order_mode}')">Save</button>
-          <button class="row-delete" onclick="deleteOrderLine('${order.id}', '${order.order_group_id}')">delete this item</button>
-        </div>
-        <div class="form-status" id="updateStatus-${order.id}"></div>
-
-        <div class="history-note">This customer's other orders</div>
-        ${renderOrdersTable(history)}
-      </div>`;
-  } catch (err){
-    console.error('Order detail failed:', err);
-    detailEl.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load order details.</p>`;
-  }
-}
-
-async function deleteOrderLine(orderId, groupId){
-  if (!confirm('Delete this line item? This cannot be undone.')) return;
-  try {
-    const { error } = await db.from('orders').delete().eq('id', orderId);
-    if (error) throw error;
-    await loadAllOrders();
-    document.getElementById('orderDetail').innerHTML = '';
-  } catch (err){
-    console.error('Delete failed:', err);
-    alert(err.message || 'Could not delete this item.');
-  }
-}
-
-async function deleteWholeOrder(groupId){
-  if (!confirm('Delete the ENTIRE order (all items in this checkout)? This cannot be undone.')) return;
-  try {
-    const { error } = await db.from('orders').delete().eq('order_group_id', groupId);
-    if (error) throw error;
-    await loadAllOrders();
-    document.getElementById('orderDetail').innerHTML = '';
-  } catch (err){
-    console.error('Delete failed:', err);
-    alert(err.message || 'Could not delete this order.');
-  }
-}
-
-async function saveOrderUpdate(orderId, orderMode){
-  const statusEl = document.getElementById(`updateStatus-${orderId}`);
-  const newStatus = document.getElementById(`statusSelect-${orderId}`).value;
-  const newPayment = document.getElementById(`paymentSelect-${orderId}`).value;
-  const newQty = parseInt(document.getElementById(`qtySelect-${orderId}`).value, 10);
-  statusEl.textContent = 'Saving…'; statusEl.className = 'form-status';
-
-  if (!newQty || newQty < 1){
-    statusEl.textContent = 'Quantity must be at least 1.'; statusEl.className = 'form-status err'; return;
-  }
-
-  const fields = { status: newStatus, payment_status: newPayment, quantity: newQty };
-  if (orderMode === 'once'){
-    fields.delivery_date = document.getElementById(`dateSelect-${orderId}`).value;
-  } else {
-    fields.recurring_day = document.getElementById(`daySelect-${orderId}`).value;
-  }
-
-  try {
-    const { error } = await db.from('orders').update(fields).eq('id', orderId);
-    if (error) throw error;
-    statusEl.textContent = 'Saved.'; statusEl.className = 'form-status ok';
-    loadAllOrders();
-  } catch (err){
-    console.error('Update failed:', err);
-    statusEl.textContent = err.message || 'Could not save.';
-    statusEl.className = 'form-status err';
-  }
-}
 
 // =========================================================================
-// CUSTOMERS
+// INIT
 // =========================================================================
-let allCustomersCache = [];
-
-async function loadAllCustomers(){
-  const wrap = document.getElementById('customersTableWrap');
-  wrap.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading…</p>';
-  try {
-    const { data, error } = await db.from('profiles').select('*').order('created_at', { ascending: false });
-    if (error) throw error;
-    allCustomersCache = data || [];
-    wrap.innerHTML = `
-      <table class="orders-table">
-        <thead><tr><th>Name</th><th>Hostel</th><th>Room</th><th>Phone</th></tr></thead>
-        <tbody>
-          ${allCustomersCache.map(p => `
-            <tr class="clickable" onclick="openCustomerDetail('${p.id}')">
-              <td>${p.full_name}</td>
-              <td>${p.hostel}</td>
-              <td>${p.room_number}${p.wing}</td>
-              <td>${p.phone}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
-  } catch (err){
-    console.error('Load customers failed:', err);
-    wrap.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load customers.</p>`;
-  }
-}
-
-async function openCustomerDetail(customerId){
-  const detailEl = document.getElementById('customerDetail');
-  const profile = allCustomersCache.find(p => p.id === customerId);
-  if (!profile) return;
-
-  detailEl.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading…</p>';
-  try {
-    const { data: orders, error } = await db.from('orders').select('*').eq('customer_id', customerId).order('created_at', { ascending: false });
-    if (error) throw error;
-
-    detailEl.innerHTML = `
-      <div class="order-detail">
-        <h4>${profile.full_name}</h4>
-        <div class="update-row">
-          <div class="field"><label>Name</label><input type="text" id="editName-${profile.id}" value="${profile.full_name}"></div>
-          <div class="field"><label>Hostel</label><input type="text" id="editHostel-${profile.id}" value="${profile.hostel}"></div>
-          <div class="field"><label>Room</label><input type="text" id="editRoom-${profile.id}" value="${profile.room_number}"></div>
-          <div class="field">
-            <label>Wing</label>
-            <select id="editWing-${profile.id}">
-              <option value="A" ${profile.wing==='A'?'selected':''}>A</option>
-              <option value="B" ${profile.wing==='B'?'selected':''}>B</option>
-            </select>
-          </div>
-          <div class="field"><label>Phone</label><input type="text" id="editPhone-${profile.id}" value="${profile.phone}"></div>
-          <button onclick="saveCustomerEdit('${profile.id}')">Save</button>
-        </div>
-        <div class="form-status" id="customerEditStatus-${profile.id}"></div>
-
-        <div class="history-note">Order history</div>
-        ${renderOrdersTable(orders)}
-      </div>`;
-  } catch (err){
-    console.error('Customer detail failed:', err);
-    detailEl.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load this customer.</p>`;
-  }
-}
-
-async function saveCustomerEdit(customerId){
-  const statusEl = document.getElementById(`customerEditStatus-${customerId}`);
-  const fields = {
-    full_name: document.getElementById(`editName-${customerId}`).value.trim(),
-    hostel: document.getElementById(`editHostel-${customerId}`).value.trim(),
-    room_number: document.getElementById(`editRoom-${customerId}`).value.trim(),
-    wing: document.getElementById(`editWing-${customerId}`).value,
-    phone: document.getElementById(`editPhone-${customerId}`).value.trim()
-  };
-  statusEl.textContent = 'Saving…'; statusEl.className = 'form-status';
-  try {
-    const { error } = await db.from('profiles').update(fields).eq('id', customerId);
-    if (error) throw error;
-    statusEl.textContent = 'Saved.'; statusEl.className = 'form-status ok';
-    loadAllCustomers();
-  } catch (err){
-    console.error('Customer update failed:', err);
-    statusEl.textContent = err.message || 'Could not save.';
-    statusEl.className = 'form-status err';
-  }
-}
-
-// ---- init ----
+renderCart();
 if (db){
   refreshSession();
   db.auth.onAuthStateChange((_event, _session) => { refreshSession(); });
-} else {
-  renderAdminGate();
 }
 </script>
 </body>

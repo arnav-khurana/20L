@@ -47,6 +47,13 @@
   .form-status.err{ color:var(--bad); }
   .form-status.ok{ color:var(--good); }
   .admin-login{ max-width:360px; }
+  .admin-tabs{ display:flex; gap:10px; margin-bottom:22px; }
+  .admin-tab{ padding:10px 18px; border-radius:999px; border:1.5px solid var(--line); background:var(--mist); font-weight:600; font-size:13.5px; }
+  .admin-tab.active{ background:var(--bottle); border-color:var(--bottle); color:#fff; }
+  .danger-btn{ padding:12px 18px; border-radius:10px; border:1.5px solid var(--bad); background:#fff; color:var(--bad); font-weight:600; }
+  .danger-btn:hover{ background:var(--bad); color:#fff; }
+  .detail-actions{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:6px; }
+  .row-delete{ background:none; border:none; color:var(--bad); font-size:12px; text-decoration:underline; }
 
   table.orders-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
   table.orders-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#8A97A0; padding:8px 10px; border-bottom:1px solid var(--line); }
@@ -99,8 +106,20 @@
     </div>
 
     <div id="adminPanel" style="display:none;">
-      <div id="adminTableWrap"></div>
-      <div id="orderDetail"></div>
+      <div class="admin-tabs">
+        <button class="admin-tab active" id="tabOrders" onclick="switchAdminTab('orders')">Orders</button>
+        <button class="admin-tab" id="tabCustomers" onclick="switchAdminTab('customers')">Customers</button>
+      </div>
+
+      <div id="ordersTabPane">
+        <div id="adminTableWrap"></div>
+        <div id="orderDetail"></div>
+      </div>
+
+      <div id="customersTabPane" style="display:none;">
+        <div id="customersTableWrap"></div>
+        <div id="customerDetail"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -169,6 +188,14 @@ async function logOut(){
   isAdmin = false;
   renderAccountUI();
   renderAdminGate();
+}
+
+function switchAdminTab(tab){
+  document.getElementById('tabOrders').classList.toggle('active', tab === 'orders');
+  document.getElementById('tabCustomers').classList.toggle('active', tab === 'customers');
+  document.getElementById('ordersTabPane').style.display = (tab === 'orders') ? 'block' : 'none';
+  document.getElementById('customersTabPane').style.display = (tab === 'customers') ? 'block' : 'none';
+  if (tab === 'customers') loadAllCustomers();
 }
 
 function renderAdminGate(){
@@ -269,6 +296,27 @@ async function loadAllOrders(){
   }
 }
 
+function renderGroupItemsWithDelete(items){
+  if (!items || items.length === 0) return '<p style="color:#8A97A0; font-size:13.5px;">No items.</p>';
+  return `
+    <table class="orders-table">
+      <thead><tr><th>Item</th><th>Qty</th><th>Delivery</th><th>Total</th><th>Status</th><th>Payment</th><th></th></tr></thead>
+      <tbody>
+        ${items.map(o => `
+          <tr>
+            <td>${ITEM_LABEL[o.item_type] || o.item_type}</td>
+            <td>${o.quantity}</td>
+            <td>${o.order_mode === 'recurring' ? `every ${DAY_LABELS[o.recurring_day] || o.recurring_day}` : o.delivery_date}</td>
+            <td class="mono">₹${o.total_amount}</td>
+            <td><span class="badge ${o.status}">${o.status}</span></td>
+            <td><span class="badge ${o.payment_status}">${o.payment_status}</span></td>
+            <td><button class="row-delete" onclick="deleteOrderLine('${o.id}', '${o.order_group_id}')">delete</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
 async function openOrderDetail(orderId){
   const detailEl = document.getElementById('orderDetail');
   const order = allOrdersCache.find(o => o.id === orderId);
@@ -286,7 +334,10 @@ async function openOrderDetail(orderId){
 
     detailEl.innerHTML = `
       <div class="order-detail">
-        <h4>Order — ${order.customer_name}</h4>
+        <div class="detail-actions">
+          <h4>Order — ${order.customer_name}</h4>
+          <button class="danger-btn" onclick="deleteWholeOrder('${order.order_group_id}')">Delete entire order</button>
+        </div>
         <div class="kv">
           <div>Room</div><div>${order.hostel}, Room ${order.room_number}${order.wing}</div>
           <div>Phone</div><div>${order.phone}</div>
@@ -294,10 +345,25 @@ async function openOrderDetail(orderId){
         </div>
 
         <div class="history-note">Items in this order</div>
-        ${renderOrdersTable(groupItems)}
+        ${renderGroupItemsWithDelete(groupItems)}
 
-        <div class="history-note">Update this line item</div>
+        <div class="history-note">Edit selected line item (${ITEM_LABEL[order.item_type] || order.item_type})</div>
         <div class="update-row">
+          <div class="field">
+            <label>Quantity</label>
+            <input type="number" min="1" id="qtySelect-${order.id}" value="${order.quantity}">
+          </div>
+          ${order.order_mode === 'once' ? `
+          <div class="field">
+            <label>Delivery date</label>
+            <input type="date" id="dateSelect-${order.id}" value="${order.delivery_date || ''}">
+          </div>` : `
+          <div class="field">
+            <label>Recurring day</label>
+            <select id="daySelect-${order.id}">
+              ${['mon','tue','wed','thu','fri','sat','sun'].map(d => `<option value="${d}" ${d===order.recurring_day?'selected':''}>${DAY_LABELS[d]}</option>`).join('')}
+            </select>
+          </div>`}
           <div class="field">
             <label>Status</label>
             <select id="statusSelect-${order.id}">
@@ -310,7 +376,8 @@ async function openOrderDetail(orderId){
               ${['unpaid','claimed','confirmed'].map(s => `<option value="${s}" ${s===order.payment_status?'selected':''}>${s}</option>`).join('')}
             </select>
           </div>
-          <button onclick="saveOrderUpdate('${order.id}')">Save</button>
+          <button onclick="saveOrderUpdate('${order.id}', '${order.order_mode}')">Save</button>
+          <button class="row-delete" onclick="deleteOrderLine('${order.id}', '${order.order_group_id}')">delete this item</button>
         </div>
         <div class="form-status" id="updateStatus-${order.id}"></div>
 
@@ -323,18 +390,149 @@ async function openOrderDetail(orderId){
   }
 }
 
-async function saveOrderUpdate(orderId){
+async function deleteOrderLine(orderId, groupId){
+  if (!confirm('Delete this line item? This cannot be undone.')) return;
+  try {
+    const { error } = await db.from('orders').delete().eq('id', orderId);
+    if (error) throw error;
+    await loadAllOrders();
+    document.getElementById('orderDetail').innerHTML = '';
+  } catch (err){
+    console.error('Delete failed:', err);
+    alert(err.message || 'Could not delete this item.');
+  }
+}
+
+async function deleteWholeOrder(groupId){
+  if (!confirm('Delete the ENTIRE order (all items in this checkout)? This cannot be undone.')) return;
+  try {
+    const { error } = await db.from('orders').delete().eq('order_group_id', groupId);
+    if (error) throw error;
+    await loadAllOrders();
+    document.getElementById('orderDetail').innerHTML = '';
+  } catch (err){
+    console.error('Delete failed:', err);
+    alert(err.message || 'Could not delete this order.');
+  }
+}
+
+async function saveOrderUpdate(orderId, orderMode){
   const statusEl = document.getElementById(`updateStatus-${orderId}`);
   const newStatus = document.getElementById(`statusSelect-${orderId}`).value;
   const newPayment = document.getElementById(`paymentSelect-${orderId}`).value;
+  const newQty = parseInt(document.getElementById(`qtySelect-${orderId}`).value, 10);
   statusEl.textContent = 'Saving…'; statusEl.className = 'form-status';
+
+  if (!newQty || newQty < 1){
+    statusEl.textContent = 'Quantity must be at least 1.'; statusEl.className = 'form-status err'; return;
+  }
+
+  const fields = { status: newStatus, payment_status: newPayment, quantity: newQty };
+  if (orderMode === 'once'){
+    fields.delivery_date = document.getElementById(`dateSelect-${orderId}`).value;
+  } else {
+    fields.recurring_day = document.getElementById(`daySelect-${orderId}`).value;
+  }
+
   try {
-    const { error } = await db.from('orders').update({ status: newStatus, payment_status: newPayment }).eq('id', orderId);
+    const { error } = await db.from('orders').update(fields).eq('id', orderId);
     if (error) throw error;
     statusEl.textContent = 'Saved.'; statusEl.className = 'form-status ok';
     loadAllOrders();
   } catch (err){
     console.error('Update failed:', err);
+    statusEl.textContent = err.message || 'Could not save.';
+    statusEl.className = 'form-status err';
+  }
+}
+
+// =========================================================================
+// CUSTOMERS
+// =========================================================================
+let allCustomersCache = [];
+
+async function loadAllCustomers(){
+  const wrap = document.getElementById('customersTableWrap');
+  wrap.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading…</p>';
+  try {
+    const { data, error } = await db.from('profiles').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    allCustomersCache = data || [];
+    wrap.innerHTML = `
+      <table class="orders-table">
+        <thead><tr><th>Name</th><th>Hostel</th><th>Room</th><th>Phone</th></tr></thead>
+        <tbody>
+          ${allCustomersCache.map(p => `
+            <tr class="clickable" onclick="openCustomerDetail('${p.id}')">
+              <td>${p.full_name}</td>
+              <td>${p.hostel}</td>
+              <td>${p.room_number}${p.wing}</td>
+              <td>${p.phone}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  } catch (err){
+    console.error('Load customers failed:', err);
+    wrap.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load customers.</p>`;
+  }
+}
+
+async function openCustomerDetail(customerId){
+  const detailEl = document.getElementById('customerDetail');
+  const profile = allCustomersCache.find(p => p.id === customerId);
+  if (!profile) return;
+
+  detailEl.innerHTML = '<p style="color:#8A97A0; font-size:13.5px;">Loading…</p>';
+  try {
+    const { data: orders, error } = await db.from('orders').select('*').eq('customer_id', customerId).order('created_at', { ascending: false });
+    if (error) throw error;
+
+    detailEl.innerHTML = `
+      <div class="order-detail">
+        <h4>${profile.full_name}</h4>
+        <div class="update-row">
+          <div class="field"><label>Name</label><input type="text" id="editName-${profile.id}" value="${profile.full_name}"></div>
+          <div class="field"><label>Hostel</label><input type="text" id="editHostel-${profile.id}" value="${profile.hostel}"></div>
+          <div class="field"><label>Room</label><input type="text" id="editRoom-${profile.id}" value="${profile.room_number}"></div>
+          <div class="field">
+            <label>Wing</label>
+            <select id="editWing-${profile.id}">
+              <option value="A" ${profile.wing==='A'?'selected':''}>A</option>
+              <option value="B" ${profile.wing==='B'?'selected':''}>B</option>
+            </select>
+          </div>
+          <div class="field"><label>Phone</label><input type="text" id="editPhone-${profile.id}" value="${profile.phone}"></div>
+          <button onclick="saveCustomerEdit('${profile.id}')">Save</button>
+        </div>
+        <div class="form-status" id="customerEditStatus-${profile.id}"></div>
+
+        <div class="history-note">Order history</div>
+        ${renderOrdersTable(orders)}
+      </div>`;
+  } catch (err){
+    console.error('Customer detail failed:', err);
+    detailEl.innerHTML = `<p style="color:var(--bad); font-size:13.5px;">Could not load this customer.</p>`;
+  }
+}
+
+async function saveCustomerEdit(customerId){
+  const statusEl = document.getElementById(`customerEditStatus-${customerId}`);
+  const fields = {
+    full_name: document.getElementById(`editName-${customerId}`).value.trim(),
+    hostel: document.getElementById(`editHostel-${customerId}`).value.trim(),
+    room_number: document.getElementById(`editRoom-${customerId}`).value.trim(),
+    wing: document.getElementById(`editWing-${customerId}`).value,
+    phone: document.getElementById(`editPhone-${customerId}`).value.trim()
+  };
+  statusEl.textContent = 'Saving…'; statusEl.className = 'form-status';
+  try {
+    const { error } = await db.from('profiles').update(fields).eq('id', customerId);
+    if (error) throw error;
+    statusEl.textContent = 'Saved.'; statusEl.className = 'form-status ok';
+    loadAllCustomers();
+  } catch (err){
+    console.error('Customer update failed:', err);
     statusEl.textContent = err.message || 'Could not save.';
     statusEl.className = 'form-status err';
   }
