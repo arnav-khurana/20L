@@ -195,9 +195,6 @@
   .pay-amount{ font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; margin:12px 0 4px; }
   .pay-hint{ font-size:12.5px; color:var(--muted); margin-bottom:16px; }
   .back-link{ background:none; border:none; text-decoration:underline; font-size:13px; color:var(--muted); margin-top:10px; }
-  .cancel-link{ background:none; border:none; text-decoration:underline; font-size:12px; color:var(--bad); white-space:nowrap; }
-  .cancel-link:hover{ opacity:.8; }
-  .cancel-hint{ font-size:11.5px; color:var(--faint); }
   /* Custom-dates month nav, sits above the calendar preview */
   .custom-cal-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
   .custom-cal-nav button{ background:none; border:1px solid var(--line); border-radius:8px; padding:4px 10px; font-size:13px; font-weight:600; color:var(--ink); }
@@ -702,6 +699,22 @@ window.addEventListener('error', function(e){
   box.textContent = 'JS error: ' + e.message + ' (' + (e.filename || '').split('/').pop() + ':' + e.lineno + ')';
 });
 
+// A rejected promise nobody awaited (e.g. a Supabase call that failed in a
+// way our own try/catch didn't wrap) used to fail silently — a button would
+// just spin forever with no error shown anywhere. Surface it the same way
+// as a thrown JS error, so it's visible instead of invisible.
+window.addEventListener('unhandledrejection', function(e){
+  let box = document.getElementById('jsErrorBox');
+  if (!box){
+    box = document.createElement('div');
+    box.id = 'jsErrorBox';
+    box.style.cssText = 'position:fixed; bottom:0; left:0; right:0; background:#b3261e; color:#fff; font-family:monospace; font-size:12px; padding:10px 14px; z-index:9999; white-space:pre-wrap;';
+    document.body.appendChild(box);
+  }
+  const reason = e.reason && e.reason.message ? e.reason.message : String(e.reason);
+  box.textContent = 'Unhandled promise error: ' + reason;
+});
+
 // ---- state ----
 let db = null;
 let isConfigured = false;
@@ -753,6 +766,17 @@ const PAYMENT_LABEL = { unpaid: 'Unpaid', claimed: 'Payment confirmation pending
 let currentUser = null;
 let currentProfile = null;
 let ordersChannel = null;
+
+// ---- timeout wrapper — so a hung network request shows an error and
+// resets the button instead of leaving it spinning forever ----
+function withTimeout(promise, ms, message){
+  ms = ms || 15000;
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message || "This is taking too long — check your connection and try again.")), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 // ---- button loading helper ----
 function setLoading(btn, loading){
@@ -1122,7 +1146,7 @@ async function signUp(){
   setLoading(btn, true);
 
   try {
-    const { data, error } = await db.auth.signUp({ email, password });
+    const { data, error } = await withTimeout(db.auth.signUp({ email, password }));
     if (error) throw error;
 
     if (!data.session){
@@ -1131,9 +1155,9 @@ async function signUp(){
       return;
     }
 
-    const { error: profileErr } = await db.from('profiles').insert({
+    const { error: profileErr } = await withTimeout(db.from('profiles').insert({
       id: data.user.id, full_name: name, phone, hostel, bed_code: bedCode, first_order_claimed: false
-    });
+    }));
     if (profileErr) throw profileErr;
 
     await refreshSession();
@@ -1182,7 +1206,7 @@ async function logIn(){
   statusEl.textContent = ''; statusEl.className = 'form-status';
   setLoading(btn, true);
   try {
-    const { error } = await db.auth.signInWithPassword({ email, password });
+    const { error } = await withTimeout(db.auth.signInWithPassword({ email, password }));
     if (error) throw error;
     await refreshSession();
     logActivity('login');
@@ -1196,16 +1220,22 @@ async function logIn(){
   }
 }
 
-async function logOut(){
-  await logActivity('logout');
-  if (db) await db.auth.signOut();
-  currentUser = null;
-  currentProfile = null;
-  unsubscribeOrders();
-  renderAccountUI();
-  renderCart();
-  document.getElementById('ordersResult').innerHTML = '';
-  document.getElementById('myOrdersLede').textContent = 'Log in to see your order history.';
+async function logOut(btn){
+  setLoading(btn, true);
+  try {
+    await logActivity('logout');
+    if (db) await db.auth.signOut();
+  } catch (err){
+    console.error('Log out failed:', err);
+  } finally {
+    currentUser = null;
+    currentProfile = null;
+    unsubscribeOrders();
+    renderAccountUI();
+    renderCart();
+    document.getElementById('ordersResult').innerHTML = '';
+    document.getElementById('myOrdersLede').textContent = 'Log in to see your order history.';
+  }
 }
 
 async function refreshSession(){
@@ -1214,7 +1244,7 @@ async function refreshSession(){
   currentUser = session ? session.user : null;
 
   if (currentUser){
-    const { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+    const { data: profile } = await withTimeout(db.from('profiles').select('*').eq('id', currentUser.id).maybeSingle());
     currentProfile = profile || null;
 
     if (currentProfile){
@@ -1236,7 +1266,7 @@ async function refreshSession(){
 function renderAccountUI(){
   const el = document.getElementById('navAccount');
   if (currentUser && currentProfile){
-    el.innerHTML = `<span class="who">Hi, ${currentProfile.full_name.split(' ')[0]}</span><button onclick="logOut()">Log out</button>`;
+    el.innerHTML = `<span class="who">Hi, ${currentProfile.full_name.split(' ')[0]}</span><button id="logOutBtn" onclick="logOut(this)">Log out</button>`;
   } else {
     el.innerHTML = `<button onclick="openAuthModal('login')">Log in</button>`;
   }
@@ -1617,56 +1647,6 @@ function itemsSummary(items){
 
 let myOrdersCache = [];
 
-// ---- cancellation — customers can cancel their own order up until 1 day
-// before its next delivery (i.e. it can no longer be cancelled the day of). ----
-function nextDeliveryDate(items){
-  const today = formatLocalISO(new Date());
-  let dates = [];
-  (items || []).forEach(it => {
-    if (it.mode === 'once' && it.date){
-      dates.push(it.date);
-    } else if (it.mode === 'custom' && it.custom_dates){
-      dates.push(...it.custom_dates);
-    } else if (it.mode === 'recurring'){
-      const days = daysOf(it);
-      if (days.length){
-        for (let i = 0; i < 8; i++){
-          const d = addDaysISO(today, i);
-          const dow = DOW[new Date(d + 'T00:00:00').getDay()];
-          if (days.includes(dow)){ dates.push(d); break; }
-        }
-      }
-    }
-  });
-  dates = dates.filter(d => d >= today).sort();
-  return dates.length ? dates[0] : null;
-}
-function canCancelOrder(order){
-  if (!order || order.status === 'cancelled' || order.status === 'delivered') return false;
-  const today = formatLocalISO(new Date());
-  const next = nextDeliveryDate(order.items);
-  // No known upcoming date (e.g. a fully-lapsed recurring order) — nothing left to protect, allow it.
-  if (!next) return true;
-  return next > today; // must be at least 1 day out — not deliverable today
-}
-async function cancelMyOrder(orderId){
-  const order = myOrdersCache.find(o => o.id === orderId);
-  if (!order) return;
-  if (!canCancelOrder(order)){
-    alert("This order can't be cancelled anymore — it's within 1 day of its next delivery. Message us on WhatsApp if you still need to change it.");
-    return;
-  }
-  if (!confirm('Cancel this order? This cannot be undone.')) return;
-  try {
-    const { error } = await db.from('orders').update({ status: 'cancelled' }).eq('id', orderId).eq('customer_id', currentUser.id);
-    if (error) throw error;
-    loadMyOrders();
-  } catch (err){
-    console.error('Cancel order failed:', err);
-    alert(err.message || 'Could not cancel this order.');
-  }
-}
-
 async function loadMyOrders(){
   const resultEl = document.getElementById('ordersResult');
   const ledeEl = document.getElementById('myOrdersLede');
@@ -1692,16 +1672,10 @@ function renderOrdersTable(data){
   }
   return `
     <table class="orders-table">
-      <thead><tr><th>Date placed</th><th>Items</th><th>Delivery date</th><th>Total</th><th>Status</th><th>Payment</th><th></th></tr></thead>
+      <thead><tr><th>Date placed</th><th>Items</th><th>Delivery date</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead>
       <tbody>
         ${data.map(o => {
           const hasRecurring = (o.items || []).some(it => it.mode === 'recurring');
-          const cancellable = canCancelOrder(o);
-          const cancelCell = (o.status === 'cancelled')
-            ? ''
-            : cancellable
-              ? `<button class="cancel-link" onclick="cancelMyOrder('${o.id}')">Cancel</button>`
-              : `<span class="cancel-hint">Too late to cancel</span>`;
           return `
           <tr>
             <td>${new Date(o.created_at).toLocaleDateString()}</td>
@@ -1710,7 +1684,6 @@ function renderOrdersTable(data){
             <td class="mono">₹${o.total_amount}</td>
             <td><span class="badge ${o.status}">${o.status}</span></td>
             <td><span class="badge ${o.payment_status}">${PAYMENT_LABEL[o.payment_status] || o.payment_status}</span></td>
-            <td>${cancelCell}</td>
           </tr>
         `;
         }).join('')}
