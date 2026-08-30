@@ -250,6 +250,9 @@
   .myorders{ padding:56px 0; border-bottom:1px solid var(--line); }
   .myorders h2{ font-size:26px; margin-bottom:6px; }
   .myorders .lede{ color:var(--muted); font-size:14.5px; margin-bottom:24px; }
+  .profile-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 22px; margin-bottom:28px; }
+  .profile-kv{ display:grid; grid-template-columns:110px 1fr; gap:9px 12px; font-size:14px; margin-bottom:14px; }
+  .profile-kv div:nth-child(odd){ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
   table.orders-table{ width:100%; border-collapse:collapse; font-size:13.5px; }
   table.orders-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--faint); padding:8px 10px; border-bottom:1px solid var(--line); }
   table.orders-table td{ padding:10px; border-bottom:1px solid var(--line); }
@@ -379,7 +382,7 @@
     <div class="navlinks">
       <a href="#how">How it works</a>
       <a href="#order">Order</a>
-      <a href="#myorders">My orders</a>
+      <a href="#myorders">Profile</a>
       <a href="#contact">Contact</a>
     </div>
     <div class="nav-right">
@@ -590,8 +593,16 @@
 
 <section class="myorders" id="myorders">
   <div class="wrap">
-    <h2 class="reveal">My orders</h2>
-    <p class="lede reveal" id="myOrdersLede">Log in to see your order history.</p>
+    <h2 class="reveal">Profile</h2>
+    <p class="lede reveal" id="myOrdersLede">Log in to see your profile and order history.</p>
+    <div class="profile-card reveal" id="profileCard" style="display:none;">
+      <div class="profile-kv">
+        <div>Name</div><div id="profileName">—</div>
+        <div>Hostel / Bed</div><div id="profileHostelBed">—</div>
+        <div>Phone</div><div id="profilePhone">—</div>
+      </div>
+      <button class="back-link" style="margin-top:4px;" onclick="openChangePasswordModal()">Change password</button>
+    </div>
     <div id="ordersResult"></div>
   </div>
 </section>
@@ -630,6 +641,7 @@
       <div class="field"><label for="loginEmail">Email</label><input type="email" id="loginEmail" required></div>
       <div class="field"><label for="loginPassword">Password</label><input type="password" id="loginPassword" required></div>
       <button type="submit" class="confirm-btn" id="loginBtn">Log in</button>
+      <button type="button" class="back-link" onclick="switchAuthTab('forgot')">Forgot password?</button>
       <div class="form-status" id="loginStatus"></div>
     </form>
 
@@ -647,6 +659,33 @@
       <div class="field"><label for="suPhone">Phone number</label><input type="tel" id="suPhone" required></div>
       <button type="submit" class="confirm-btn" id="signupBtn">Create account</button>
       <div class="form-status" id="signupStatus"></div>
+    </form>
+
+    <form id="forgotPane" style="display:none;" onsubmit="event.preventDefault(); sendPasswordReset();">
+      <h3>Reset your password</h3>
+      <div class="modal-sub">We'll email you a link to set a new password.</div>
+      <div class="field"><label for="forgotEmail">Email</label><input type="email" id="forgotEmail" required></div>
+      <button type="submit" class="confirm-btn" id="forgotBtn">Send reset link</button>
+      <button type="button" class="back-link" onclick="switchAuthTab('login')">Back to log in</button>
+      <div class="form-status" id="forgotStatus"></div>
+    </form>
+  </div>
+</div>
+
+<!-- Set/change password modal — opened either from the "forgot password"
+     email link (Supabase starts a recovery session and we listen for the
+     PASSWORD_RECOVERY event) or from the "Change password" button in the
+     Profile section for an already-logged-in customer. -->
+<div class="modal-backdrop" id="newPasswordModalBackdrop">
+  <div class="modal">
+    <button class="modal-close" onclick="closeNewPasswordModal()">×</button>
+    <form id="newPasswordPane" onsubmit="event.preventDefault(); saveNewPassword();">
+      <h3>Set a new password</h3>
+      <div class="modal-sub">At least 6 characters.</div>
+      <div class="field"><label for="newPassword1">New password</label><input type="password" id="newPassword1" required></div>
+      <div class="field"><label for="newPassword2">Confirm new password</label><input type="password" id="newPassword2" required></div>
+      <button type="submit" class="confirm-btn" id="newPasswordBtn">Save password</button>
+      <div class="form-status" id="newPasswordStatus"></div>
     </form>
   </div>
 </div>
@@ -1125,10 +1164,95 @@ function closeAuthModal(){
   document.getElementById('authModalBackdrop').classList.remove('open');
 }
 function switchAuthTab(tab){
+  // The forgot-password pane isn't one of the two top tabs (it's reached
+  // via the "Forgot password?" link) — hide the tab bar while it's open so
+  // it doesn't look like a third, unselected tab.
+  document.getElementById('tabLogin').closest('.auth-tabs').style.display = (tab === 'forgot') ? 'none' : 'flex';
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
   document.getElementById('loginPane').style.display = (tab === 'login') ? 'block' : 'none';
   document.getElementById('signupPane').style.display = (tab === 'signup') ? 'block' : 'none';
+  document.getElementById('forgotPane').style.display = (tab === 'forgot') ? 'block' : 'none';
+  if (tab === 'forgot'){
+    const loginEmail = document.getElementById('loginEmail').value.trim();
+    if (loginEmail) document.getElementById('forgotEmail').value = loginEmail;
+    document.getElementById('forgotStatus').textContent = '';
+    document.getElementById('forgotStatus').className = 'form-status';
+  }
+}
+
+async function sendPasswordReset(){
+  const btn = document.getElementById('forgotBtn');
+  const statusEl = document.getElementById('forgotStatus');
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email){
+    statusEl.textContent = 'Enter your email.'; statusEl.className = 'form-status err'; return;
+  }
+  if (!isConfigured || !db){
+    statusEl.textContent = 'Not connected to the database right now.'; statusEl.className = 'form-status err'; return;
+  }
+  statusEl.textContent = ''; statusEl.className = 'form-status';
+  setLoading(btn, true);
+  try {
+    const { error } = await db.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) throw error;
+    statusEl.textContent = "If that email has an account, we've sent a reset link.";
+    statusEl.className = 'form-status ok';
+  } catch (err){
+    console.error('Password reset request failed:', err);
+    statusEl.textContent = err.message || 'Could not send the reset email.';
+    statusEl.className = 'form-status err';
+  } finally {
+    setLoading(btn, false);
+  }
+}
+
+// ---- set/change password ----
+// isRecoveryFlow tracks whether this modal was opened from the "forgot
+// password" email link (a recovery session with no prior login) versus an
+// already-logged-in customer using "Change password" from their Profile —
+// only the former needs the post-save messaging about being signed in.
+let isRecoveryFlow = false;
+function openChangePasswordModal(fromRecovery){
+  isRecoveryFlow = !!fromRecovery;
+  document.getElementById('newPassword1').value = '';
+  document.getElementById('newPassword2').value = '';
+  document.getElementById('newPasswordStatus').textContent = '';
+  document.getElementById('newPasswordStatus').className = 'form-status';
+  document.getElementById('newPasswordModalBackdrop').classList.add('open');
+}
+function closeNewPasswordModal(){
+  document.getElementById('newPasswordModalBackdrop').classList.remove('open');
+}
+async function saveNewPassword(){
+  const btn = document.getElementById('newPasswordBtn');
+  const statusEl = document.getElementById('newPasswordStatus');
+  const p1 = document.getElementById('newPassword1').value;
+  const p2 = document.getElementById('newPassword2').value;
+  if (p1.length < 6){
+    statusEl.textContent = 'Password needs at least 6 characters.'; statusEl.className = 'form-status err'; return;
+  }
+  if (p1 !== p2){
+    statusEl.textContent = "Passwords don't match."; statusEl.className = 'form-status err'; return;
+  }
+  statusEl.textContent = ''; statusEl.className = 'form-status';
+  setLoading(btn, true);
+  try {
+    const { error } = await db.auth.updateUser({ password: p1 });
+    if (error) throw error;
+    statusEl.textContent = 'Password updated.';
+    statusEl.className = 'form-status ok';
+    await refreshSession();
+    setTimeout(closeNewPasswordModal, 1200);
+  } catch (err){
+    console.error('Password update failed:', err);
+    statusEl.textContent = err.message || 'Could not update your password.';
+    statusEl.className = 'form-status err';
+  } finally {
+    setLoading(btn, false);
+  }
 }
 
 async function signUp(){
@@ -1154,20 +1278,23 @@ async function signUp(){
   setLoading(btn, true);
 
   try {
-    const { data, error } = await db.auth.signUp({ email, password });
+    const { data, error } = await db.auth.signUp({
+      email, password,
+      options: { data: { full_name: name, phone, hostel, bed_code: bedCode } }
+    });
     if (error) throw error;
 
     if (!data.session){
-      statusEl.textContent = 'Check your email to confirm your account, then log in.';
+      statusEl.textContent = "Check your inbox for a confirmation link, then log in.";
       statusEl.className = 'form-status ok';
       return;
     }
 
-    const { error: profileErr } = await db.from('profiles').insert({
-      id: data.user.id, full_name: name, phone, hostel, bed_code: bedCode, first_order_claimed: false
-    });
-    if (profileErr) throw profileErr;
-
+    // No manual profile insert here — the "on_auth_user_created" trigger
+    // (see schema.sql / migration_14) creates the profiles row itself,
+    // straight from the signup metadata above, the instant the auth.users
+    // row exists. That happens whether or not email confirmation is on, so
+    // this works either way without a race between it and refreshSession().
     await refreshSession();
     logActivity('signup', { name, hostel, bedCode, phone });
     closeAuthModal();
@@ -1237,7 +1364,8 @@ async function logOut(){
   renderAccountUI();
   renderCart();
   document.getElementById('ordersResult').innerHTML = '';
-  document.getElementById('myOrdersLede').textContent = 'Log in to see your order history.';
+  document.getElementById('myOrdersLede').textContent = 'Log in to see your profile and order history.';
+  document.getElementById('profileCard').style.display = 'none';
 }
 
 async function refreshSession(){
@@ -1254,6 +1382,10 @@ async function refreshSession(){
       document.getElementById('custHostel').value = currentProfile.hostel;
       document.getElementById('custBedCode').value = currentProfile.bed_code;
       document.getElementById('custPhone').value = currentProfile.phone;
+      document.getElementById('profileName').textContent = currentProfile.full_name;
+      document.getElementById('profileHostelBed').textContent = `${currentProfile.hostel}, ${currentProfile.bed_code}`;
+      document.getElementById('profilePhone').textContent = currentProfile.phone;
+      document.getElementById('profileCard').style.display = 'block';
       loadMyOrders();
       subscribeOrders();
     }
@@ -1818,6 +1950,15 @@ if (db){
     }
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED'){
       refreshSession();
+    }
+    // Fired when the customer arrives via a "forgot password" email link —
+    // Supabase has already turned the link's token into a real (temporary)
+    // session by this point, so refreshSession() picks them up as logged
+    // in; all that's left is prompting for the new password.
+    if (event === 'PASSWORD_RECOVERY'){
+      refreshSession();
+      closeAuthModal();
+      openChangePasswordModal(true);
     }
   });
 }
