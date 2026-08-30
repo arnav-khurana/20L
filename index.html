@@ -270,13 +270,14 @@
   .dev-banner{ background:var(--badge-pending-bg); color:var(--badge-pending-fg); font-size:12.5px; text-align:center; padding:8px 16px; font-family:'IBM Plex Mono',monospace; }
 
   /* ---- maintenance mode overlay (driven live by the admin's Settings tab) ---- */
-  .maintenance-overlay{ position:fixed; inset:0; background:var(--paper); z-index:500; display:none; align-items:center; justify-content:center; padding:24px; text-align:center; }
+  .maintenance-overlay{ position:fixed; inset:0; background:var(--paper); z-index:40; display:none; align-items:center; justify-content:center; padding:24px; text-align:center; }
   .maintenance-overlay.open{ display:flex; animation:fadeIn .35s ease; }
   .maintenance-card{ max-width:440px; animation:popIn .4s ease; }
   .maintenance-card .glass{ font-size:52px; display:inline-block; animation:maintBob 2.6s ease-in-out infinite; }
   @keyframes maintBob{ 0%,100%{ transform:translateY(0) rotate(-4deg); } 50%{ transform:translateY(-8px) rotate(4deg); } }
   .maintenance-card h2{ margin:14px 0 8px; font-size:24px; }
   .maintenance-card p{ color:var(--muted); font-size:14.5px; line-height:1.6; }
+  .maintenance-admin-hint{ font-size:12.5px !important; color:var(--faint) !important; margin-top:14px !important; }
   .modal-backdrop{ position:fixed; inset:0; background:rgba(20,36,51,.55); display:none; align-items:center; justify-content:center; z-index:200; padding:20px; opacity:0; transition:opacity .2s ease; }
   .modal-backdrop.open{ display:flex; opacity:1; }
   .modal{ background:#fff; border-radius:var(--radius); padding:48px 28px 28px; max-width:420px; width:100%; max-height:90vh; overflow-y:auto; position:relative; animation:popIn .25s ease; }
@@ -363,6 +364,7 @@
     <span class="glass">🫙</span>
     <h2>Be right back.</h2>
     <p>20L is down for a bit of maintenance. Your account and order history are safe — check back shortly, or reach us below if it's urgent.</p>
+    <p class="maintenance-admin-hint">Are you the admin? Log in from the top of the page to get in during maintenance.</p>
     <div class="contact-links" style="justify-content:center; margin-top:18px;">
       <a class="contact-link" href="mailto:222chilika@gmail.com">✉️ 222chilika@gmail.com</a>
       <a class="contact-link js-whatsapp-link" href="#" target="_blank" rel="noopener">
@@ -663,7 +665,7 @@
 
     <form id="forgotPane" style="display:none;" onsubmit="event.preventDefault(); sendPasswordReset();">
       <h3>Reset your password</h3>
-      <div class="modal-sub">We'll email you a 6-digit code.</div>
+      <div class="modal-sub">We'll email you a code.</div>
       <div class="field"><label for="forgotEmail">Email</label><input type="email" id="forgotEmail" required></div>
       <button type="submit" class="confirm-btn" id="forgotBtn">Send code</button>
       <button type="button" class="back-link" onclick="switchAuthTab('login')">Back to log in</button>
@@ -672,8 +674,8 @@
 
     <form id="resetOtpPane" style="display:none;" onsubmit="event.preventDefault(); verifyResetOtp();">
       <h3>Enter your code</h3>
-      <div class="modal-sub" id="resetOtpSub">Enter the 6-digit code we emailed you, and your new password.</div>
-      <div class="field"><label for="resetOtpCode">6-digit code</label><input type="text" id="resetOtpCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required></div>
+      <div class="modal-sub" id="resetOtpSub">Enter the code we emailed you, and your new password.</div>
+      <div class="field"><label for="resetOtpCode">Code</label><input type="text" id="resetOtpCode" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="one-time-code" required></div>
       <div class="field"><label for="resetOtpPassword1">New password</label><input type="password" id="resetOtpPassword1" required></div>
       <div class="field"><label for="resetOtpPassword2">Confirm new password</label><input type="password" id="resetOtpPassword2" required></div>
       <button type="submit" class="confirm-btn" id="resetOtpBtn">Reset password</button>
@@ -1226,7 +1228,7 @@ async function sendPasswordReset(isResend){
       otpStatus.textContent = 'Sent a new code.'; otpStatus.className = 'form-status ok';
     } else {
       switchAuthTab('resetOtp');
-      document.getElementById('resetOtpSub').textContent = `Enter the 6-digit code we sent to ${email}, and your new password.`;
+      document.getElementById('resetOtpSub').textContent = `Enter the code we sent to ${email}, and your new password.`;
       document.getElementById('resetOtpCode').value = '';
       document.getElementById('resetOtpPassword1').value = '';
       document.getElementById('resetOtpPassword2').value = '';
@@ -1248,8 +1250,8 @@ async function verifyResetOtp(){
   const code = document.getElementById('resetOtpCode').value.trim();
   const p1 = document.getElementById('resetOtpPassword1').value;
   const p2 = document.getElementById('resetOtpPassword2').value;
-  if (!/^\d{6}$/.test(code)){
-    statusEl.textContent = 'Enter the 6-digit code.'; statusEl.className = 'form-status err'; return;
+  if (!/^\d{6,}$/.test(code)){
+    statusEl.textContent = 'Enter the code we emailed you.'; statusEl.className = 'form-status err'; return;
   }
   if (p1.length < 6){
     statusEl.textContent = 'Password needs at least 6 characters.'; statusEl.className = 'form-status err'; return;
