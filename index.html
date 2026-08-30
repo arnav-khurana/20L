@@ -663,24 +663,37 @@
 
     <form id="forgotPane" style="display:none;" onsubmit="event.preventDefault(); sendPasswordReset();">
       <h3>Reset your password</h3>
-      <div class="modal-sub">We'll email you a link to set a new password.</div>
+      <div class="modal-sub">We'll email you a 6-digit code.</div>
       <div class="field"><label for="forgotEmail">Email</label><input type="email" id="forgotEmail" required></div>
-      <button type="submit" class="confirm-btn" id="forgotBtn">Send reset link</button>
+      <button type="submit" class="confirm-btn" id="forgotBtn">Send code</button>
       <button type="button" class="back-link" onclick="switchAuthTab('login')">Back to log in</button>
       <div class="form-status" id="forgotStatus"></div>
+    </form>
+
+    <form id="resetOtpPane" style="display:none;" onsubmit="event.preventDefault(); verifyResetOtp();">
+      <h3>Enter your code</h3>
+      <div class="modal-sub" id="resetOtpSub">Enter the 6-digit code we emailed you, and your new password.</div>
+      <div class="field"><label for="resetOtpCode">6-digit code</label><input type="text" id="resetOtpCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required></div>
+      <div class="field"><label for="resetOtpPassword1">New password</label><input type="password" id="resetOtpPassword1" required></div>
+      <div class="field"><label for="resetOtpPassword2">Confirm new password</label><input type="password" id="resetOtpPassword2" required></div>
+      <button type="submit" class="confirm-btn" id="resetOtpBtn">Reset password</button>
+      <button type="button" class="back-link" onclick="sendPasswordReset(true)">Resend code</button>
+      <button type="button" class="back-link" onclick="switchAuthTab('login')">Back to log in</button>
+      <div class="form-status" id="resetOtpStatus"></div>
     </form>
   </div>
 </div>
 
-<!-- Set/change password modal — opened either from the "forgot password"
-     email link (Supabase starts a recovery session and we listen for the
-     PASSWORD_RECOVERY event) or from the "Change password" button in the
-     Profile section for an already-logged-in customer. -->
+<!-- "Change password" modal for an already-logged-in customer, opened from
+     the "Change password" button in the Profile section. No OTP needed
+     here — they're already authenticated, so this just sets a new
+     password directly. (The "forgot password" flow above is separate and
+     uses an OTP because that person isn't logged in yet.) -->
 <div class="modal-backdrop" id="newPasswordModalBackdrop">
   <div class="modal">
     <button class="modal-close" onclick="closeNewPasswordModal()">×</button>
     <form id="newPasswordPane" onsubmit="event.preventDefault(); saveNewPassword();">
-      <h3>Set a new password</h3>
+      <h3>Change your password</h3>
       <div class="modal-sub">At least 6 characters.</div>
       <div class="field"><label for="newPassword1">New password</label><input type="password" id="newPassword1" required></div>
       <div class="field"><label for="newPassword2">Confirm new password</label><input type="password" id="newPassword2" required></div>
@@ -823,6 +836,7 @@ const PAYMENT_LABEL = { unpaid: 'Unpaid', claimed: 'Payment confirmation pending
 
 let currentUser = null;
 let currentProfile = null;
+let isCurrentUserAdmin = false;
 let ordersChannel = null;
 
 // ---- button loading helper ----
@@ -1164,15 +1178,17 @@ function closeAuthModal(){
   document.getElementById('authModalBackdrop').classList.remove('open');
 }
 function switchAuthTab(tab){
-  // The forgot-password pane isn't one of the two top tabs (it's reached
-  // via the "Forgot password?" link) — hide the tab bar while it's open so
-  // it doesn't look like a third, unselected tab.
-  document.getElementById('tabLogin').closest('.auth-tabs').style.display = (tab === 'forgot') ? 'none' : 'flex';
+  // The forgot-password and reset-code panes aren't among the two top tabs
+  // (forgot is reached via the "Forgot password?" link, reset-code follows
+  // it automatically) — hide the tab bar while either is open so it
+  // doesn't look like a third, unselected tab.
+  document.getElementById('tabLogin').closest('.auth-tabs').style.display = (tab === 'forgot' || tab === 'resetOtp') ? 'none' : 'flex';
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
   document.getElementById('loginPane').style.display = (tab === 'login') ? 'block' : 'none';
   document.getElementById('signupPane').style.display = (tab === 'signup') ? 'block' : 'none';
   document.getElementById('forgotPane').style.display = (tab === 'forgot') ? 'block' : 'none';
+  document.getElementById('resetOtpPane').style.display = (tab === 'resetOtp') ? 'block' : 'none';
   if (tab === 'forgot'){
     const loginEmail = document.getElementById('loginEmail').value.trim();
     if (loginEmail) document.getElementById('forgotEmail').value = loginEmail;
@@ -1181,10 +1197,15 @@ function switchAuthTab(tab){
   }
 }
 
-async function sendPasswordReset(){
+// The email currently mid-reset — set once the code has been requested,
+// so the "enter code" step below knows which address the code belongs to
+// without asking the person to type it twice.
+let resetEmail = '';
+
+async function sendPasswordReset(isResend){
   const btn = document.getElementById('forgotBtn');
   const statusEl = document.getElementById('forgotStatus');
-  const email = document.getElementById('forgotEmail').value.trim();
+  const email = isResend ? resetEmail : document.getElementById('forgotEmail').value.trim();
   if (!email){
     statusEl.textContent = 'Enter your email.'; statusEl.className = 'form-status err'; return;
   }
@@ -1192,31 +1213,75 @@ async function sendPasswordReset(){
     statusEl.textContent = 'Not connected to the database right now.'; statusEl.className = 'form-status err'; return;
   }
   statusEl.textContent = ''; statusEl.className = 'form-status';
-  setLoading(btn, true);
+  if (!isResend) setLoading(btn, true);
   try {
-    const { error } = await db.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname
-    });
+    // No redirectTo here — with the code entered by hand on the "enter
+    // code" step below, this never needs to redirect anywhere, so there's
+    // nothing to allow-list in Supabase's URL Configuration for this flow.
+    const { error } = await db.auth.resetPasswordForEmail(email);
     if (error) throw error;
-    statusEl.textContent = "If that email has an account, we've sent a reset link.";
-    statusEl.className = 'form-status ok';
+    resetEmail = email;
+    if (isResend){
+      const otpStatus = document.getElementById('resetOtpStatus');
+      otpStatus.textContent = 'Sent a new code.'; otpStatus.className = 'form-status ok';
+    } else {
+      switchAuthTab('resetOtp');
+      document.getElementById('resetOtpSub').textContent = `Enter the 6-digit code we sent to ${email}, and your new password.`;
+      document.getElementById('resetOtpCode').value = '';
+      document.getElementById('resetOtpPassword1').value = '';
+      document.getElementById('resetOtpPassword2').value = '';
+      document.getElementById('resetOtpStatus').textContent = '';
+      document.getElementById('resetOtpStatus').className = 'form-status';
+    }
   } catch (err){
     console.error('Password reset request failed:', err);
-    statusEl.textContent = err.message || 'Could not send the reset email.';
+    statusEl.textContent = err.message || 'Could not send the code.';
+    statusEl.className = 'form-status err';
+  } finally {
+    if (!isResend) setLoading(btn, false);
+  }
+}
+
+async function verifyResetOtp(){
+  const btn = document.getElementById('resetOtpBtn');
+  const statusEl = document.getElementById('resetOtpStatus');
+  const code = document.getElementById('resetOtpCode').value.trim();
+  const p1 = document.getElementById('resetOtpPassword1').value;
+  const p2 = document.getElementById('resetOtpPassword2').value;
+  if (!/^\d{6}$/.test(code)){
+    statusEl.textContent = 'Enter the 6-digit code.'; statusEl.className = 'form-status err'; return;
+  }
+  if (p1.length < 6){
+    statusEl.textContent = 'Password needs at least 6 characters.'; statusEl.className = 'form-status err'; return;
+  }
+  if (p1 !== p2){
+    statusEl.textContent = "Passwords don't match."; statusEl.className = 'form-status err'; return;
+  }
+  statusEl.textContent = ''; statusEl.className = 'form-status';
+  setLoading(btn, true);
+  try {
+    // Verifying the code establishes a real (short-lived) session for this
+    // person, exactly as clicking a reset link would — updateUser() right
+    // after this is what actually changes the password.
+    const { error: verifyErr } = await db.auth.verifyOtp({ email: resetEmail, token: code, type: 'recovery' });
+    if (verifyErr) throw verifyErr;
+    const { error: updateErr } = await db.auth.updateUser({ password: p1 });
+    if (updateErr) throw updateErr;
+    statusEl.textContent = "Password updated — you're logged in.";
+    statusEl.className = 'form-status ok';
+    await refreshSession();
+    setTimeout(closeAuthModal, 1200);
+  } catch (err){
+    console.error('Password reset failed:', err);
+    statusEl.textContent = err.message || 'Could not reset your password. The code may be wrong or expired.';
     statusEl.className = 'form-status err';
   } finally {
     setLoading(btn, false);
   }
 }
 
-// ---- set/change password ----
-// isRecoveryFlow tracks whether this modal was opened from the "forgot
-// password" email link (a recovery session with no prior login) versus an
-// already-logged-in customer using "Change password" from their Profile —
-// only the former needs the post-save messaging about being signed in.
-let isRecoveryFlow = false;
-function openChangePasswordModal(fromRecovery){
-  isRecoveryFlow = !!fromRecovery;
+// ---- change password (already-logged-in customer, from Profile) ----
+function openChangePasswordModal(){
   document.getElementById('newPassword1').value = '';
   document.getElementById('newPassword2').value = '';
   document.getElementById('newPasswordStatus').textContent = '';
@@ -1376,6 +1441,7 @@ async function refreshSession(){
   if (currentUser){
     const { data: profile } = await db.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
     currentProfile = profile || null;
+    await checkIsAdmin();
 
     if (currentProfile){
       document.getElementById('custName').value = currentProfile.full_name;
@@ -1391,10 +1457,33 @@ async function refreshSession(){
     }
   } else {
     currentProfile = null;
+    isCurrentUserAdmin = false;
     unsubscribeOrders();
   }
   renderAccountUI();
   renderCart();
+  // Re-evaluate the maintenance overlay now that admin status may have
+  // changed (e.g. just logged in) — an admin browsing the normal site
+  // should never be blocked by their own maintenance-mode toggle.
+  if (!window.__isAdminMode) checkMaintenanceMode();
+}
+
+// An admin logged into the main customer site (not the separate ?admin
+// panel) should still be able to browse normally during maintenance mode —
+// otherwise there'd be no way to check what customers see, or to turn
+// maintenance mode back off, without a second browser/incognito window.
+// This checks the same "admins" table the admin panel itself checks,
+// which customers can read only their own row of (see the "users can
+// check own admin row" RLS policy in schema.sql).
+async function checkIsAdmin(){
+  if (!currentUser || !db){ isCurrentUserAdmin = false; return; }
+  try {
+    const { data } = await db.from('admins').select('id').eq('id', currentUser.id).maybeSingle();
+    isCurrentUserAdmin = !!data;
+  } catch (err){
+    console.error('Admin check failed:', err);
+    isCurrentUserAdmin = false;
+  }
 }
 
 function renderAccountUI(){
@@ -1880,8 +1969,13 @@ let siteStatusChannel = null;
 function setMaintenanceOverlay(on){
   const el = document.getElementById('maintenanceOverlay');
   if (!el) return;
-  el.classList.toggle('open', !!on);
-  document.body.style.overflow = on ? 'hidden' : '';
+  // An admin sees the real site underneath even while maintenance mode is
+  // on for everyone else — otherwise there'd be no way to check what
+  // customers see, or turn maintenance mode back off, without a second
+  // logged-out browser/incognito window.
+  const shouldShow = !!on && !isCurrentUserAdmin;
+  el.classList.toggle('open', shouldShow);
+  document.body.style.overflow = shouldShow ? 'hidden' : '';
 }
 async function checkMaintenanceMode(){
   if (!db) return;
@@ -1951,14 +2045,14 @@ if (db){
     if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED'){
       refreshSession();
     }
-    // Fired when the customer arrives via a "forgot password" email link —
-    // Supabase has already turned the link's token into a real (temporary)
-    // session by this point, so refreshSession() picks them up as logged
-    // in; all that's left is prompting for the new password.
+    // Fallback safety net: if the reset email's template still has the
+    // link in it too (Supabase's default template includes both), and
+    // someone clicks that instead of typing in the code, this still opens
+    // the password form for them rather than leaving them stuck.
     if (event === 'PASSWORD_RECOVERY'){
       refreshSession();
       closeAuthModal();
-      openChangePasswordModal(true);
+      openChangePasswordModal();
     }
   });
 }
