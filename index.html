@@ -2044,17 +2044,16 @@ if (db){
     if (event === 'SIGNED_IN' && currentUser && session && session.user && session.user.id === currentUser.id){
       return;
     }
-    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED'){
+    // PASSWORD_RECOVERY is included here deliberately, but WITHOUT ever
+    // opening a password form itself — verifyResetOtp() already does that
+    // whole job explicitly (verify code → set password → show success). The
+    // "enter your OTP" step calls auth.verifyOtp({ type: 'recovery' }),
+    // which itself fires this exact event as a side effect — if this
+    // handler also opened a modal here, that's a second, redundant "set
+    // password" screen popping up on top of the OTP flow's own one every
+    // single time, which is exactly the bug this comment is warning about.
+    if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED' || event === 'PASSWORD_RECOVERY'){
       refreshSession();
-    }
-    // Fallback safety net: if the reset email's template still has the
-    // link in it too (Supabase's default template includes both), and
-    // someone clicks that instead of typing in the code, this still opens
-    // the password form for them rather than leaving them stuck.
-    if (event === 'PASSWORD_RECOVERY'){
-      refreshSession();
-      closeAuthModal();
-      openChangePasswordModal();
     }
   });
 }
