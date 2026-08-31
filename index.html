@@ -1347,7 +1347,17 @@ async function signUp(){
   try {
     const { data, error } = await db.auth.signUp({
       email, password,
-      options: { data: { full_name: name, phone, hostel, bed_code: bedCode } }
+      options: {
+        data: { full_name: name, phone, hostel, bed_code: bedCode },
+        // Explicit, rather than relying solely on the dashboard's Site URL
+        // field matching wherever this is actually deployed — a mismatch
+        // there is exactly what sends confirmation links to a dead
+        // localhost address. This always points at wherever the page
+        // signing up actually is. Still requires that URL to be added to
+        // Authentication → URL Configuration → Redirect URLs in Supabase,
+        // or Supabase silently falls back to the (possibly wrong) Site URL.
+        emailRedirectTo: window.location.origin + window.location.pathname
+      }
     });
     if (error) throw error;
 
