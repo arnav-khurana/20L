@@ -797,6 +797,7 @@
     <button class="modal-close" onclick="closeBulkRefillModal()" aria-label="Close">×</button>
     <h3>Save some for later?</h3>
     <div class="modal-sub">You're getting <span id="bulkRefillTotalQty">1</span> refills. You probably won't need them all delivered right now — pick how many to deliver with this order, and we'll save the rest to your account so future orders can be free.</div>
+    <p class="hint" id="bulkRefillExistingNote" style="display:none; margin-bottom:10px;"></p>
     <div class="field" style="margin-bottom:14px;">
       <label for="bulkRefillDeliverNow">Deliver how many now?</label>
       <input type="number" id="bulkRefillDeliverNow" min="1" value="1" oninput="updateBulkRefillPreview()">
@@ -1728,20 +1729,48 @@ function addToCart(){
     if (extraDates.length) item.extraDates = [...extraDates];
   }
 
+  // Same item type + same delivery schedule (date, or day pattern) already
+  // in the cart? Merge into that one card instead of adding a second —
+  // cards only split apart when the item type or the delivery date/days
+  // genuinely differ.
+  const key = cartMatchKey(item);
+  const existing = cart.find(ci => cartMatchKey(ci) === key);
+
   // A one-time refill order for more than 1 almost never needs delivering
   // all at once — offer to deliver fewer now and save the rest to the
   // account for future free orders, rather than pushing straight to cart.
   if (item.variant === 'refill' && item.mode === 'once' && item.qty > 1 && currentUser){
     pendingBulkRefillItem = item;
-    openBulkRefillModal(item.qty);
+    openBulkRefillModal(item.qty, existing || null);
+    return;
+  }
+
+  if (existing){
+    existing.qty += item.qty;
+    // A plain (non-split) top-up is straightforwardly "deliver this too" —
+    // keep the paid total in sync, no re-ask needed.
+    if (existing.paidQty !== undefined) existing.paidQty += item.qty;
+    resetAddItemUI();
+    renderCart();
     return;
   }
 
   finishAddToCart(item);
 }
 
-function finishAddToCart(item){
-  cart.push(item);
+// Identifies which existing cart card (if any) a new item belongs with:
+// same item type, same mode, and the same date (once) / day pattern
+// (recurring) / date set (custom).
+function cartMatchKey(item){
+  if (item.mode === 'once') return `${item.variant}|once|${item.date}`;
+  if (item.mode === 'custom') return `${item.variant}|custom|${[...item.customDates].sort().join(',')}`;
+  const days = [...(item.days || [])].sort().join(',');
+  return `${item.variant}|recurring|${item.subType || 'ongoing'}|${days}`;
+}
+
+// Resets the quantity/day/date pickers back to their defaults after
+// something is added to (or merged into) the cart.
+function resetAddItemUI(){
   currentQty = 1;
   document.getElementById('qtyDisplay').textContent = 1;
   updateGlassBuddy(1, '');
@@ -1756,46 +1785,87 @@ function finishAddToCart(item){
     customMonthOffset = 0;
     renderCustomCalendar();
   }
+}
+
+function finishAddToCart(item){
+  cart.push(item);
+  resetAddItemUI();
   renderCart();
 }
 
 // ---- bulk refill → save-for-later modal ----
 let pendingBulkRefillItem = null;
-function openBulkRefillModal(qty){
+let pendingBulkRefillExisting = null;
+function openBulkRefillModal(qty, existing){
+  pendingBulkRefillExisting = existing || null;
   document.getElementById('bulkRefillTotalQty').textContent = qty;
   const input = document.getElementById('bulkRefillDeliverNow');
-  input.value = 1;
+  const minAllowed = pendingBulkRefillExisting ? 0 : 1;
+  input.min = minAllowed;
+  input.value = minAllowed;
   input.max = qty;
+  const noteEl = document.getElementById('bulkRefillExistingNote');
+  if (pendingBulkRefillExisting){
+    noteEl.style.display = 'block';
+    const already = pendingBulkRefillExisting.qty;
+    noteEl.textContent = `You already have ${already} refill${already === 1 ? '' : 's'} going out with this order for that date.`;
+  } else {
+    noteEl.style.display = 'none';
+    noteEl.textContent = '';
+  }
   updateBulkRefillPreview();
   document.getElementById('bulkRefillModalBackdrop').classList.add('open');
 }
 function closeBulkRefillModal(){
   document.getElementById('bulkRefillModalBackdrop').classList.remove('open');
   pendingBulkRefillItem = null;
+  pendingBulkRefillExisting = null;
 }
 function updateBulkRefillPreview(){
   if (!pendingBulkRefillItem) return;
   const qty = pendingBulkRefillItem.qty;
   const input = document.getElementById('bulkRefillDeliverNow');
-  let deliverNow = Math.max(1, Math.min(qty, parseInt(input.value, 10) || 1));
+  const minAllowed = pendingBulkRefillExisting ? 0 : 1;
+  let deliverNow = Math.max(minAllowed, Math.min(qty, parseInt(input.value, 10) || minAllowed));
   input.value = deliverNow;
   const saved = qty - deliverNow;
-  document.getElementById('bulkRefillSavedPreview').textContent = saved > 0
-    ? `${saved} refill${saved > 1 ? 's' : ''} will be saved to your account for future orders.`
-    : `All ${qty} will be delivered with this order.`;
+  const previewEl = document.getElementById('bulkRefillSavedPreview');
+  if (pendingBulkRefillExisting){
+    previewEl.textContent = saved > 0
+      ? `${deliverNow > 0 ? `${deliverNow} more will go out with this order, and ` : ''}${saved} will be saved to your account for future orders.`
+      : `All ${qty} will be added to this order's delivery.`;
+  } else {
+    previewEl.textContent = saved > 0
+      ? `${saved} refill${saved > 1 ? 's' : ''} will be saved to your account for future orders.`
+      : `All ${qty} will be delivered with this order.`;
+  }
 }
 function confirmBulkRefillSplit(){
   if (!pendingBulkRefillItem) return;
   const item = pendingBulkRefillItem;
-  const qty = item.qty;
+  const qty = item.qty; // this increment only
   const input = document.getElementById('bulkRefillDeliverNow');
-  const deliverNow = Math.max(1, Math.min(qty, parseInt(input.value, 10) || 1));
-  item.paidQty = qty;     // still charged for the full amount ordered
-  item.qty = deliverNow;  // only this many are delivered/tracked on this order
-  item.bankQty = qty - deliverNow;
+  const minAllowed = pendingBulkRefillExisting ? 0 : 1;
+  const deliverNow = Math.max(minAllowed, Math.min(qty, parseInt(input.value, 10) || minAllowed));
+  const bankNow = qty - deliverNow;
+
+  if (pendingBulkRefillExisting){
+    const existing = pendingBulkRefillExisting;
+    const priorPaid = existing.paidQty !== undefined ? existing.paidQty : existing.qty;
+    existing.qty += deliverNow;
+    existing.bankQty = (existing.bankQty || 0) + bankNow;
+    existing.paidQty = priorPaid + qty;
+  } else {
+    item.paidQty = qty;     // still charged for the full amount ordered
+    item.qty = deliverNow;  // only this many are delivered/tracked on this order
+    item.bankQty = bankNow;
+    cart.push(item);
+  }
   pendingBulkRefillItem = null;
+  pendingBulkRefillExisting = null;
   document.getElementById('bulkRefillModalBackdrop').classList.remove('open');
-  finishAddToCart(item);
+  resetAddItemUI();
+  renderCart();
 }
 
 function removeFromCart(i){
